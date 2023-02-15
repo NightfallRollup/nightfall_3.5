@@ -23,6 +23,7 @@ import {
   saveTransaction,
   saveBlock,
   setTransactionHashSiblingInfo,
+  removeNotChallengeablesTrees,
   getNumberOfL2Blocks,
 } from '../services/database.mjs';
 import { decryptCommitment } from '../services/commitment-sync.mjs';
@@ -157,6 +158,7 @@ async function blockProposedEventHandler(data, syncing) {
 
   try {
     await saveTree(transactionHashL1, block.blockNumberL2, updatedTimber);
+    await removeNotChallengeablesTrees();
   } catch (err) {
     // while initial syncing we avoid duplicates errors
     if (!syncing || !err.message.includes('duplicate key')) throw err;
