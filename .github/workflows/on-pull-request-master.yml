@@ -6,17 +6,18 @@ on:
 
 env:
   DOCKER_BUILDKIT: 1 # enable docker buildkit
-# Whitelisting is disabled during testing for backwards compatibility with these tests.  It must not be disabled in production.
+  # Whitelisting is disabled during testing for backwards compatibility with these tests.  It must not be disabled in production.
   WHITELISTING: disable
 
 jobs:
-  dependency-review:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: 'Checkout Repository'
-        uses: actions/checkout@v3
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@v2
+  # This dependency-review require public repository or GitHub Advance Security license
+  #dependency-review:
+  #  runs-on: ubuntu-20.04
+  #  steps:
+  #    - name: 'Checkout Repository'
+  #      uses: actions/checkout@v3
+  #    - name: 'Dependency Review'
+  #      uses: actions/dependency-review-action@v2
 
   eslint-check:
     runs-on: ubuntu-20.04
