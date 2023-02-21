@@ -131,7 +131,7 @@ function to get last block not challengeable.
 export async function getLastBlockNotChallengeable() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(COMMITMENTS_DB);
-  const challengePeriodSeconds = new Date(Date.now());
+  const challengePeriodSeconds = new Date();
   challengePeriodSeconds.setSeconds(challengePeriodSeconds.getSeconds() - CHALLENGE_PERIOD_SECONDS);
   const query = { timeBlockL2: { $lt: challengePeriodSeconds } };
   const [block] = await db
