@@ -18,6 +18,7 @@ const {
   TRANSACTIONS_COLLECTION,
   TIMBER_HEIGHT,
   HASH_TYPE,
+  TRANSFER_SECRET_COLLECTION,
 } = config;
 
 /**
@@ -270,4 +271,21 @@ export async function getTransactionsByTransactionHashesByL2Block(transactionHas
     (a, b) => positions[a.transactionHash] - positions[b.transactionHash],
   );
   return transactions;
+}
+
+export async function getRegisterPairSenderReceiver(PKa, PKb, PKx, intermediateXB, sharedSecret) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(COMMITMENTS_DB);
+  return db
+    .collection(TRANSFER_SECRET_COLLECTION)
+    .findOne({ PKa, PKb, PKx, intermediateXB, sharedSecret });
+}
+
+export async function saveRegisterPairSenderReceiver(PKa, PKb, PKx, intermediateXB, sharedSecret) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(COMMITMENTS_DB);
+
+  return db
+    .collection(TRANSFER_SECRET_COLLECTION)
+    .insertOne({ PKa, PKb, PKx, intermediateXB, sharedSecret });
 }

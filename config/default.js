@@ -54,10 +54,12 @@ module.exports = {
   PROPOSER_COLLECTION: 'proposers',
   CHALLENGER_COLLECTION: 'challengers',
   TRANSACTIONS_COLLECTION: 'transactions',
+  TRANSFER_SECRET_COLLECTION: 'transfer_secrets',
   SUBMITTED_BLOCKS_COLLECTION: 'blocks',
   INVALID_BLOCKS_COLLECTION: 'invalid_blocks',
   COMMIT_COLLECTION: 'commits',
   COMMITMENTS_COLLECTION: 'commitments',
+  COMMITMENTS_REGULATOR_COLLECTION: 'commitments_regulator',
   TIMBER_COLLECTION: 'timber',
   CIRCUIT_COLLECTION: 'circuit_storage',
   CIRCUIT_HASH_COLLECTION: 'circuit_hash_storage',
@@ -607,4 +609,5 @@ module.exports = {
   },
   TIMER_CHANGE_PROPOSER_SECOND: Number(process.env.TIMER_CHANGE_PROPOSER_SECOND) || 30,
   MAX_ROTATE_TIMES: Number(process.env.MAX_ROTATE_TIMES) || 2,
+  REGULATOR_PRIVATE_KEY: process.env.REGULATOR_PRIVATE_KEY,
 };
