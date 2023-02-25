@@ -1,12 +1,15 @@
 /**
  * Module to handle new Transactions being posted
  */
+import config from 'config';
+import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
 import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
+  saveBufferedTransaction,
 } from '../services/database.mjs';
 import { checkTransaction } from '../services/transaction-checker.mjs';
 import TransactionError from '../classes/transaction-error.mjs';
@@ -14,27 +17,48 @@ import { getTransactionSubmittedCalldata } from '../services/process-calldata.mj
 
 const { ZERO, STATE_CONTRACT_NAME } = constants;
 
-/**
- * This handler runs whenever a new transaction is submitted to the blockchain
- */
-async function transactionSubmittedEventHandler(eventParams) {
-  const { offchain = false, ...data } = eventParams;
-  let transaction;
-  if (offchain) {
-    transaction = data;
-    transaction.blockNumber = 'offchain';
-    transaction.transactionHashL1 = 'offchain';
-  } else {
-    transaction = await getTransactionSubmittedCalldata(data);
-    transaction.blockNumber = data.blockNumber;
-    transaction.transactionHashL1 = data.transactionHash;
-  }
+const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
 
+// Flag to enable/disable submitTransaction processing
+let _submitTransactionEnable = true;
+// Flag to enable/disable worker processing
+let _workerEnable = true;
+
+export function workerEnableSet(flag) {
+  _workerEnable = flag;
+}
+export function workerEnableGet() {
+  return _workerEnable;
+}
+
+export function submitTransactionEnable(enable) {
+  _submitTransactionEnable = enable;
+}
+
+/**
+ * Transaction Event Handler processing. It can be processed by main thread
+ * or by worker thread
+ *
+ * @param {Object} _transaction Transaction data
+ * @param {bolean} txEnable Flag indicating if transactions should be processed immediatelly (true)
+ * or should be stored in a temporal buffer.
+ */
+export async function submitTransaction(transaction, txEnable) {
   logger.info({
     msg: 'Transaction Handler - New transaction received.',
     transaction,
+    txEnable,
   });
 
+  // Test mode. If txEnable is true, we process transactions as fast as we can (as usual). If false, then we
+  // store these transactions in a buffer with the idea of processing them back later at once.
+  if (!txEnable) {
+    saveBufferedTransaction({ ...transaction });
+    return;
+  }
+
+  logger.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+  const startTimeTx = new Date().getTime();
   try {
     const stateInstance = await waitForContract(STATE_CONTRACT_NAME);
     const circuitInfo = await stateInstance.methods.getCircuitInfo(transaction.circuitHash).call();
@@ -50,21 +74,38 @@ async function transactionSubmittedEventHandler(eventParams) {
       logger.info({ msg: `Commmitment ${transaction.commitments[0]} is escrowed` });
     }
     logger.info({ msg: 'Checking transaction validity...' });
+
+    console.log('Transaction Scrow time RRRRRR', new Date().getTime() - startTimeTx);
+    const startTimeTxCheckTx = new Date().getTime();
+    
     await checkTransaction({
       transaction,
       checkDuplicatesInL2: true,
       checkDuplicatesInMempool: true,
     });
 
+    console.log('Transaction check time RRRRRR', new Date().getTime() - startTimeTxCheckTx);
+    /*
+    const startTimeFilter = new Date().getTime();
     const transactionCommitments = transaction.commitments.filter(c => c !== ZERO);
     const transactionNullifiers = transaction.nullifiers.filter(n => n !== ZERO);
+    console.log('Transaction filter time RRRRRR', new Date().getTime() - startTimeFilter);
+    */
 
+    /*
+    const startTimeDeleteDup = new Date().getTime();
     await deleteDuplicateCommitmentsAndNullifiersFromMemPool(
       transactionCommitments,
       transactionNullifiers,
     );
+    console.log('Transaction Delete dup time RRRRRR', new Date().getTime() - startTimeDeleteDup);
+    */
 
+    const startTimeSave = new Date().getTime();
     await saveTransaction({ ...transaction });
+    console.log('Transaction save time RRRRRR', new Date().getTime() - startTimeSave);
+
+    console.log('Transaction processing time RRRRRR', new Date().getTime() - startTimeTx);
   } catch (err) {
     if (err instanceof TransactionError) {
       logger.warn(
@@ -76,4 +117,54 @@ async function transactionSubmittedEventHandler(eventParams) {
   }
 }
 
-export default transactionSubmittedEventHandler;
+/**
+ * This handler runs whenever a new transaction is submitted to the blockchain
+ * Transaction Event Handler processing. It can be processed by main thread
+ * or by worker thread
+ * @param {Object} _transaction Transaction data
+ * @param {boolean} fromBlockProposer Flag indicating whether this transaction comes from
+ * block proposer (for those transactions that werent picked by current proposer).
+ * @param {bolean} txEnable Flag indicating if transactions should be processed immediatelly (true)
+ * or should be stored in a temporal buffer.
+ */
+export async function transactionSubmittedEventHandler(eventParams) {
+  const { offchain = false, ...data } = eventParams;
+  let transaction;
+  if (offchain) {
+    transaction = data;
+    transaction.blockNumber = 'offchain';
+    transaction.transactionHashL1 = 'offchain';
+  } else {
+    transaction = await getTransactionSubmittedCalldata(data);
+    transaction.blockNumber = data.blockNumber;
+    transaction.transactionHashL1 = data.transactionHash;
+  }
+
+  logger.info({
+    msg: 'Transaction Handler - New transaction received.',
+    transaction,
+    txWorkerCount,
+    _workerEnable,
+  });
+
+  // If TX WORKERS enabled or not responsive, route transaction requests to main thread
+  if (Number(txWorkerCount) && _workerEnable) {
+    axios
+      .get(`${txWorkerUrl}/tx-submitted`, {
+        params: {
+          tx: transaction,
+          enable: _submitTransactionEnable === true,
+        },
+      })
+      .catch(function (error) {
+        logger.error(`Error submit tx worker ${error}`);
+        // Main thread (no workers)
+        if (error.request) {
+          submitTransaction(transaction, _submitTransactionEnable);
+        }
+      });
+  } else {
+    // Main thread (no workers)
+    await submitTransaction(transaction, _submitTransactionEnable);
+  }
+}

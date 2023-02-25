@@ -38,6 +38,7 @@ const main = async () => {
     await subscribeToProposedBlockWebSocketConnection(setBlockProposedWebSocketConnection);
     await startEventQueue(queueManager, eventHandlers, proposer);
 
+    logger.info('OPTIMIST START');
     // enqueue the block-assembler every time the queue becomes empty
     queues[0].on('end', () => {
       // We do the proposer isMe check here to fail fast instead of re-enqueing.
@@ -57,7 +58,9 @@ const main = async () => {
     await enqueueEvent(() => logger.info('Start Queue'), 0);
 
     // try to sync any missing blockchain state (event queues will be paused until this finishes)
+    logger.info('OPTIMIST START SYNCING');
     initialBlockSync(proposer);
+    logger.info('OPTIMIST START SYNCING DONE');
     app.listen(80);
   } catch (err) {
     logger.error(err);

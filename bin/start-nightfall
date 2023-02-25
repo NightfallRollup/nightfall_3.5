@@ -12,6 +12,29 @@ usage()
   echo "  -d or --dev; to bind mount the filesystem and use it for development"
 }
 
+initDb()
+{
+ DB_NAME=optimist_data
+TRANSACTIONS_COLLECTION=transactions 
+SUBMITTED_BLOCKS_COLLECTION=blocks
+
+
+  mongosh --host localhost:27017 \
+   --retryWrites=false\
+   --quiet \
+   --eval "db.getMongo().use(\"${DB_NAME}\");\
+     db.${TRANSACTIONS_COLLECTION}.createIndex({transactionHash:1});\
+     db.${TRANSACTIONS_COLLECTION}.createIndex({transactionHashL1:1});\
+     db.${TRANSACTIONS_COLLECTION}.createIndex({nullifiers:1});\
+     db.${TRANSACTIONS_COLLECTION}.createIndex({commitments:1});\
+     db.${TRANSACTIONS_COLLECTION}.createIndex({blockNumberL2:1});\
+     db.${SUBMITTED_BLOCKS_COLLECTION}.createIndex({blockNumberL2:-1});\
+     db.${SUBMITTED_BLOCKS_COLLECTION}.createIndex({blockHash:-1});\
+     db.${SUBMITTED_BLOCKS_COLLECTION}.createIndex({blockNumber:-1});\
+     db.${SUBMITTED_BLOCKS_COLLECTION}.createIndex({proposer: -1});\
+     db.${SUBMITTED_BLOCKS_COLLECTION}.createIndex({mempool: -1})"
+
+}
 # select a Geth or Ganache client
 if [ -z "$1" ]; then
   usage
@@ -103,4 +126,6 @@ if [ -z "$NF_SERVICES_TO_LOG" ]; then
 fi
 
 docker-compose $FILE  $DEV $ADVERSARY -p 'nightfall_3' up -d --remove-orphans ${NF_SERVICES_TO_START//,/ }
+sleep 5
+initDb
 docker-compose -p 'nightfall_3' $FILE $DEV $ADVERSARY logs -f ${NF_SERVICES_TO_LOG//,/ }

@@ -15,9 +15,11 @@ import {
   saveInvalidBlock,
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
+  getNumberOfL2Blocks,
 } from '../services/database.mjs';
 import { getProposeBlockCalldata } from '../services/process-calldata.mjs';
 import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
+import { setLastProcessedBlockNumberL2 } from '../services/transaction-checker.mjs';
 
 const { TIMBER_HEIGHT, HASH_TYPE } = config;
 const { ZERO } = constants;
@@ -55,6 +57,7 @@ async function blockProposedEventHandler(data) {
     transactions,
   });
 
+
   // We get the L1 block time in order to save it in the database to have this information available
   let timeBlockL2 = await getTimeByBlock(transactionHashL1);
   timeBlockL2 = new Date(timeBlockL2 * 1000);
@@ -71,11 +74,13 @@ async function blockProposedEventHandler(data) {
     // In which case this handler is being called be the resync code. either way, we need to add the transaction.
     // let's use transactionSubmittedEventHandler to do this because it will perform all the duties associated
     // with saving a transaction.
+    logger.info('Saving Transactions xxxxxxxxx');
     await Promise.all(
       transactions.map(async tx =>
         saveTransaction({ ...tx, blockNumberL2: block.blockNumberL2, mempool: false }),
       ),
     );
+    logger.info('Saving Transactions xxxxxxxxx done');
 
     const blockCommitments = transactions
       .map(t => t.commitments.filter(c => c !== ZERO))
@@ -98,6 +103,7 @@ async function blockProposedEventHandler(data) {
       TIMBER_HEIGHT,
     );
     const res = await saveTree(currentBlockCount, block.blockNumberL2, updatedTimber);
+    setLastProcessedBlockNumberL2((await getNumberOfL2Blocks()) - 1);
     logger.debug(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
     // signal to the block-making routines that a block is received: they
     // won't make a new block until their previous one is stored on-chain.

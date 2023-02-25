@@ -54,6 +54,7 @@ module.exports = {
   PROPOSER_COLLECTION: 'proposers',
   CHALLENGER_COLLECTION: 'challengers',
   TRANSACTIONS_COLLECTION: 'transactions',
+  BUFFERED_TRANSACTIONS_COLLECTION: 'transactions_buffered',
   SUBMITTED_BLOCKS_COLLECTION: 'blocks',
   INVALID_BLOCKS_COLLECTION: 'invalid_blocks',
   COMMIT_COLLECTION: 'commits',
@@ -62,9 +63,14 @@ module.exports = {
   CIRCUIT_COLLECTION: 'circuit_storage',
   CIRCUIT_HASH_COLLECTION: 'circuit_hash_storage',
   KEYS_COLLECTION: 'keys',
-  CONTRACT_ARTIFACTS: '/app/build/contracts',
+  CONTRACT_ARTIFACTS: process.env.CONTRACT_ARTIFACTS || '/app/build/contracts',
   EXCLUDE_DIRS: 'common',
   MAX_QUEUE: 10,
+  TX_WORKER_PARAMS: {
+    txWorkerCount: process.env.TX_WORKER_COUNT || 100,
+    txWorkerUrl: process.env.TX_WORKER_URL || 'http://172.17.0.1:3000',
+    txWorkerOptimistApiUrl: process.env.TX_WORKER_OPTIMIST_API_URL || 'http://localhost:80',
+  },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,
   CONFIRMATION_POLL_TIME: 1000,
@@ -319,6 +325,7 @@ module.exports = {
       optimist1: process.env.OPTIMIST1_WS_URL || 'ws://localhost:9090',
       optimist2: process.env.OPTIMIST2_WS_URL || 'ws://localhost:9092',
     },
+    NUMBER_L2_BLOCKS: process.env.NUMBER_L2_BLOCKS || 4,
     signingKeys: {
       walletTest:
         process.env.WALLET_TEST_KEY ||

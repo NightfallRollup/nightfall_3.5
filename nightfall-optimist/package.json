@@ -36,6 +36,7 @@
     "config": "^3.3.1",
     "cors": "2.8.5",
     "express": "^4.17.1",
+    "ffjavascript": "^0.2.57",
     "general-number": "^1.0.1",
     "hex-to-binary": "^1.0.1",
     "jsonfile": "^6.1.0",

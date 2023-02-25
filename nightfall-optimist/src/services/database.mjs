@@ -22,6 +22,7 @@ const {
   TIMBER_COLLECTION,
   TIMBER_HEIGHT,
   HASH_TYPE,
+  BUFFERED_TRANSACTIONS_COLLECTION,
 } = config;
 
 /**
@@ -297,6 +298,46 @@ export async function saveTransaction(_transaction) {
 }
 
 /**
+How many transactions are waiting to be processed into a block?
+*/
+export async function numberOfUnprocessedTransactions() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(TRANSACTIONS_COLLECTION).countDocuments({ mempool: true });
+}
+
+export async function saveBufferedTransaction(_transaction) {
+  const transaction = {
+    _id: _transaction.transactionHash,
+    ..._transaction,
+  };
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+
+  db.collection(BUFFERED_TRANSACTIONS_COLLECTION).insertOne(transaction);
+}
+
+export async function findAndDeleteAllBufferedTransactions() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const returnedTransactions = await db
+    .collection(BUFFERED_TRANSACTIONS_COLLECTION)
+    .find()
+    .toArray();
+  db.collection(BUFFERED_TRANSACTIONS_COLLECTION).drop();
+  return returnedTransactions;
+}
+
+/**
+  How many transactions in BUFFERED TRANSACTIONS COLLECTION
+  */
+export async function numberOfBufferedTransactions() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(BUFFERED_TRANSACTIONS_COLLECTION).countDocuments();
+}
+
+/**
  * Add a set of L2 transactions back to the mempool after a block has been rolled back
  */
 export async function addTransactionsToMemPool(transactionHashes, blockNumberL2) {
@@ -351,6 +392,24 @@ export async function deleteDuplicateCommitmentsAndNullifiersFromMemPool(
     mempool: true,
   };
   return db.collection(TRANSACTIONS_COLLECTION).deleteMany(query);
+}
+
+export async function getTransactionByCommitment(commitmentHash) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const query = {
+    commitments: { $in: commitmentHash },
+  };
+  return db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
+}
+
+export async function getTransactionByNullifier(nullifierHash) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const query = {
+    nullifiers: { $in: nullifierHash },
+  };
+  return db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
 }
 
 /**
@@ -511,6 +570,8 @@ export async function getTransactionL2ByNullifier(nullifierHash, blockNumberL2Of
   const query = {
     nullifiers: { $in: [nullifierHash] },
     blockNumberL2: { $gt: -1, $ne: blockNumberL2OfTx },
+    // Think about combining this query
+    // $or: [{ blockNumberL2: { $gt: -1, $ne: blockNumberL2OfTx } }, { mempool: true }],
   };
   return db.collection(TRANSACTIONS_COLLECTION).findOne(query);
 }
@@ -530,6 +591,11 @@ export async function resetUnsuccessfulBlockProposedTransactions() {
 /**
 Timber functions
 */
+export async function getNumberOfL2Blocks() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(TIMBER_COLLECTION).find().count();
+}
 
 export async function saveTree(blockNumber, blockNumberL2, timber) {
   const connection = await mongo.connection(MONGO_URL);
@@ -589,7 +655,7 @@ export async function deleteTreeByBlockNumberL2(blockNumberL2) {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
   await db.collection(TIMBER_COLLECTION).updateOne({ blockNumberL2 }, { $set: { rollback: true } });
-  await new Promise(resolve => setTimeout(() => resolve(), 1000));
+  await new Promise(resolve => setTimeout(() => resolve(), 100));
   return db.collection(TIMBER_COLLECTION).deleteMany({ blockNumberL2: { $gte: blockNumberL2 } });
 }
 
