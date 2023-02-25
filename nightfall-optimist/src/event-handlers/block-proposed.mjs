@@ -1,3 +1,4 @@
+/* eslint-disable import/no-cycle */
 import WebSocket from 'ws';
 import config from 'config';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
@@ -10,7 +11,7 @@ import BlockError from '../classes/block-error.mjs';
 import { createChallenge, commitToChallenge } from '../services/challenges.mjs';
 import {
   saveBlock,
-  getLatestTree,
+  getTreeByBlockNumberL2,
   saveTree,
   saveInvalidBlock,
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
@@ -20,11 +21,18 @@ import {
 import { getProposeBlockCalldata } from '../services/process-calldata.mjs';
 import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
 import { setLastProcessedBlockNumberL2 } from '../services/transaction-checker.mjs';
+import { syncState } from '../services/state-sync.mjs';
+import Proposer from '../classes/proposer.mjs';
 
 const { TIMBER_HEIGHT, HASH_TYPE } = config;
 const { ZERO } = constants;
 
 let ws;
+// Stores latest L1 block correctly synchronized to speed possible resyncs
+let lastInOrderL1Block = 'earliest';
+// Counter to monitor resync attempts in case something is wrong we can force a
+//   full resync
+let consecutiveResyncAttempts = 0;
 
 export function setBlockProposedWebSocketConnection(_ws) {
   ws = _ws;
@@ -36,6 +44,7 @@ This handler runs whenever a BlockProposed event is emitted by the blockchain
 async function blockProposedEventHandler(data) {
   const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
   const { block, transactions } = await getProposeBlockCalldata(data);
+  const nextBlockNumberL2 = await getNumberOfL2Blocks();
 
   // If a service is subscribed to this websocket and listening for events.
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -54,9 +63,28 @@ async function blockProposedEventHandler(data) {
 
   logger.debug({
     msg: 'Received BlockProposed event',
+    receivedBlockNumberL2: block.blockNumberL2,
+    expectedBlockNumberL2: nextBlockNumberL2,
     transactions,
   });
 
+  // Check resync attempts
+  if (consecutiveResyncAttempts > 10) {
+    lastInOrderL1Block = 'earliest';
+    consecutiveResyncAttempts = 0;
+  }
+
+  // If an out of order L2 block is detected,
+  // WARNING: if we ever reach this scenario, this optimist may have built a block based
+  //  in an incorrect state and will be challengeable
+  if (block.blockNumberL2 > nextBlockNumberL2) {
+    consecutiveResyncAttempts++;
+    logger.debug('Resyncing...');
+    const proposer = new Proposer();
+    await syncState(proposer, lastInOrderL1Block);
+  }
+
+  lastInOrderL1Block = currentBlockCount;
 
   // We get the L1 block time in order to save it in the database to have this information available
   let timeBlockL2 = await getTimeByBlock(transactionHashL1);
@@ -95,7 +123,7 @@ async function blockProposedEventHandler(data) {
       block.transactionHashes,
     );
 
-    const latestTree = await getLatestTree();
+    const latestTree = await getTreeByBlockNumberL2(block.blockNumberL2 - 1);
     const updatedTimber = Timber.statelessUpdate(
       latestTree,
       blockCommitments,
@@ -103,7 +131,7 @@ async function blockProposedEventHandler(data) {
       TIMBER_HEIGHT,
     );
     const res = await saveTree(currentBlockCount, block.blockNumberL2, updatedTimber);
-    setLastProcessedBlockNumberL2((await getNumberOfL2Blocks()) - 1);
+    setLastProcessedBlockNumberL2(block.blockNumberL2);
     logger.debug(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
     // signal to the block-making routines that a block is received: they
     // won't make a new block until their previous one is stored on-chain.
