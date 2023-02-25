@@ -673,12 +673,6 @@ export async function deleteTreeByBlockNumberL2(blockNumberL2) {
   return db.collection(TIMBER_COLLECTION).deleteMany({ blockNumberL2: { $gte: blockNumberL2 } });
 }
 
-export async function getNumberOfL2Blocks() {
-  const connection = await mongo.connection(MONGO_URL);
-  const db = connection.db(OPTIMIST_DB);
-  return db.collection(TIMBER_COLLECTION).find().count();
-}
-
 // function to set the path of the transaction hash leaf in transaction hash timber
 export async function setTransactionHashSiblingInfo(
   transactionHash,
