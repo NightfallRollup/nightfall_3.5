@@ -29,8 +29,13 @@ async function fundAccounts() {
   */
 
   // Get ERC20 token address
-  const resErc20Address = await axios.get(`${CLIENT_HOST}/contract-address/ERC20Mock`);
-  const erc20Address = resErc20Address.data.address;
+  let erc20Address;
+  try {
+    const resErc20Address = await axios.get(`${CLIENT_HOST}/contract-address/ERC20Mock`);
+    erc20Address = resErc20Address.data.address;
+  } catch {
+    erc20Address = '0x4315287906f3FCF2345Ad1bfE0f682457b041Fa7';
+  }
   /*
   // Get ERC721 token address
   const resErc721Address = await axios.get(`${CLIENT_HOST}/contract-address/ERC721Mock`);

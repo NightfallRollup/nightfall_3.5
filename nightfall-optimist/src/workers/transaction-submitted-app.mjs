@@ -8,17 +8,20 @@ import os from 'os';
 import axios from 'axios';
 import fs from 'fs';
 
+import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
+import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { submitTransaction } from '../event-handlers/transaction-submitted.mjs';
 
 const { txWorkerCount, txWorkerOptimistApiUrl } = config.TX_WORKER_PARAMS;
+const { STATE_CONTRACT_NAME, CHALLENGES_CONTRACT_NAME, SHIELD_CONTRACT_NAME } = constants;
 
 //  ip addr show docker0
 async function initWorkers() {
   let shieldInterface;
   let challengesInterface;
+  let stateInterface;
   if (cluster.isPrimary) {
-    // Contact with optimist and download Shield and Challenges jsons. Only necessary is working in
-    // non docker mode. In docker mode, contracts are downloaded already
+    // Contact with optimist and download Shield, State and Challenges jsons.
     if (!process.env.TX_WORKER_DOCKER) {
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -35,22 +38,39 @@ async function initWorkers() {
               timeout: 10000,
             },
           );
+          stateInterface = await axios.get(
+            `${txWorkerOptimistApiUrl}/contract-abi/interface/State`,
+            {
+              timeout: 10000,
+            },
+          );
           break;
         } catch (err) {
           console.log('Downloading contracts. Retrying...');
           await new Promise(resolve => setTimeout(() => resolve(), 5000)); // eslint-disable-line no-await-in-loop
         }
       }
-      fs.writeFileSync(
-        `${config.CONTRACT_ARTIFACTS}/Shield.json`,
-        JSON.stringify(shieldInterface.data.interface, null, 2),
-        'utf-8',
-      );
-      fs.writeFileSync(
-        `${config.CONTRACT_ARTIFACTS}/Challenges.json`,
-        JSON.stringify(challengesInterface.data.interface, null, 2),
-        'utf-8',
-      );
+      if (!fs.existsSync(`${config.CONTRACT_ARTIFACTS}/Shield.json`)) {
+        fs.writeFileSync(
+          `${config.CONTRACT_ARTIFACTS}/Shield.json`,
+          JSON.stringify(shieldInterface.data.interface, null, 2),
+          'utf-8',
+        );
+      }
+      if (!fs.existsSync(`${config.CONTRACT_ARTIFACTS}/Challenges.json`)) {
+        fs.writeFileSync(
+          `${config.CONTRACT_ARTIFACTS}/Challenges.json`,
+          JSON.stringify(challengesInterface.data.interface, null, 2),
+          'utf-8',
+        );
+      }
+      if (!fs.existsSync(`${config.CONTRACT_ARTIFACTS}/State.json`)) {
+        fs.writeFileSync(
+          `${config.CONTRACT_ARTIFACTS}/State.json`,
+          JSON.stringify(stateInterface.data.interface, null, 2),
+          'utf-8',
+        );
+      }
     }
 
     const totalCPUs = Math.min(os.cpus().length - 1, Number(txWorkerCount));
@@ -74,6 +94,11 @@ async function initWorkers() {
     app.get('/healthcheck', async (req, res) => {
       res.sendStatus(200);
     });
+
+    await waitForContract(SHIELD_CONTRACT_NAME);
+    await waitForContract(STATE_CONTRACT_NAME);
+    await waitForContract(CHALLENGES_CONTRACT_NAME);
+    console.log(`worker ${process.pid} downloaded contracts`);
 
     // End point to submit transaction to tx worker
     app.get('/tx-submitted', async (req, res) => {

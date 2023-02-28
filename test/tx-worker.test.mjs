@@ -90,12 +90,30 @@ async function makeBlock() {
 describe('Tx worker test', () => {
   before(async () => {
     await nf3Proposer1.init(mnemonics.proposer);
-    await nf3Proposer1.registerProposer('http://optimist', await nf3Proposer1.getMinimumStake());
+    try {
+      erc20Address = await nf3Proposer1.getContractAddress('ERC20Mock');
+    } catch {
+      erc20Address = '0x4315287906f3FCF2345Ad1bfE0f682457b041Fa7';
+    }
+    const propoposerL1Balance = await nf3Proposer1.getL1Balance(nf3Proposer1.ethereumAddress);
+    const minStake = await nf3Proposer1.getMinimumStake();
+    console.log(
+      `Proposer info - L1 Balance: ${propoposerL1Balance}, Minimum Stake: ${minStake}, Address: ${nf3Proposer1.ethereumAddress}`,
+    );
+    if (propoposerL1Balance === '0') {
+      console.log('Not enough balance in proposer');
+      process.exit();
+    }
+
+    await nf3Proposer1.registerProposer('http://optimist', minStake);
     await nf3Proposer1.startProposer();
 
     // Proposer listening for incoming events
     await nf3Users[0].init(mnemonics.user1);
-    erc20Address = await nf3Users[0].getContractAddress('ERC20Mock');
+    const userL1Balance = await nf3Users[0].getL1Balance(nf3Users[0].ethereumAddress);
+    console.log(
+      `User info - L1 Balance: ${userL1Balance}, Address: ${nf3Users[0].ethereumAddress}`,
+    );
 
     stateAddress = await nf3Users[0].stateContractAddress;
     web3Client.subscribeTo('logs', eventLogs, { address: stateAddress });

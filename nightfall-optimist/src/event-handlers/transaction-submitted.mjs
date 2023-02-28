@@ -56,12 +56,24 @@ export async function submitTransaction(transaction, txEnable) {
     saveBufferedTransaction({ ...transaction });
     return;
   }
-
-  logger.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
   const startTimeTx = new Date().getTime();
+
   try {
     const stateInstance = await waitForContract(STATE_CONTRACT_NAME);
+
+    console.log(
+      'Transaction State instance time RRRRRR',
+      new Date().getTime() - startTimeTx,
+      process.pid,
+    );
+    const startTimeTxInstance = new Date().getTime();
     const circuitInfo = await stateInstance.methods.getCircuitInfo(transaction.circuitHash).call();
+    console.log(
+      'Transaction State call circuit info time RRRRRR',
+      new Date().getTime() - startTimeTxInstance,
+      process.pid,
+    );
+    const startTimeTxScrow = new Date().getTime();
     if (circuitInfo.isEscrowRequired) {
       const isCommitmentEscrowed = await stateInstance.methods
         .getCommitmentEscrowed(transaction.commitments[0])
@@ -75,37 +87,56 @@ export async function submitTransaction(transaction, txEnable) {
     }
     logger.info({ msg: 'Checking transaction validity...' });
 
-    console.log('Transaction Scrow time RRRRRR', new Date().getTime() - startTimeTx);
+    console.log(
+      'Transaction Scrow time RRRRRR',
+      new Date().getTime() - startTimeTxScrow,
+      process.pid,
+    );
     const startTimeTxCheckTx = new Date().getTime();
-    
+
+/*
+    // OPTIMIZED
+    const nonZeroCommitmentsAndNullifiers = await checkTransaction({
+      transaction,
+      checkDuplicatesInL2: true,
+      checkDuplicatesInMempool: true,
+    });
+    const nonZeroCommitments = nonZeroCommitmentsAndNullifiers[0];
+    const nonZeroNullifiers = nonZeroCommitmentsAndNullifiers[1];
+    Promise.all([
+      deleteDuplicateCommitmentsAndNullifiersFromMemPool(nonZeroCommitments, nonZeroNullifiers),
+      saveTransaction({ ...transaction }),
+    ]);
+*/
+    // DEFAULT
     await checkTransaction({
       transaction,
       checkDuplicatesInL2: true,
       checkDuplicatesInMempool: true,
     });
 
-    console.log('Transaction check time RRRRRR', new Date().getTime() - startTimeTxCheckTx);
-    /*
-    const startTimeFilter = new Date().getTime();
     const transactionCommitments = transaction.commitments.filter(c => c !== ZERO);
     const transactionNullifiers = transaction.nullifiers.filter(n => n !== ZERO);
-    console.log('Transaction filter time RRRRRR', new Date().getTime() - startTimeFilter);
-    */
 
-    /*
-    const startTimeDeleteDup = new Date().getTime();
     await deleteDuplicateCommitmentsAndNullifiersFromMemPool(
       transactionCommitments,
       transactionNullifiers,
     );
-    console.log('Transaction Delete dup time RRRRRR', new Date().getTime() - startTimeDeleteDup);
-    */
 
-    const startTimeSave = new Date().getTime();
     await saveTransaction({ ...transaction });
-    console.log('Transaction save time RRRRRR', new Date().getTime() - startTimeSave);
 
-    console.log('Transaction processing time RRRRRR', new Date().getTime() - startTimeTx);
+    // END
+    console.log(
+      'Transaction check time RRRRRR',
+      new Date().getTime() - startTimeTxCheckTx,
+      process.pid,
+    );
+
+    console.log(
+      'Transaction processing time RRRRRR',
+      new Date().getTime() - startTimeTx,
+      process.pid,
+    );
   } catch (err) {
     if (err instanceof TransactionError) {
       logger.warn(
