@@ -39,6 +39,14 @@ export async function getCurveFromQ(q) {
 
 export async function getCurveFromName(name) {
   let curve;
+
+  function normalizeName(n) {
+    return n
+      .toUpperCase()
+      .match(/[A-Za-z0-9]+/g)
+      .join('');
+  }
+
   const normName = normalizeName(name);
   if (['BN128', 'BN254', 'ALTBN128'].indexOf(normName) >= 0) {
     curve = await buildBn128();
@@ -48,11 +56,4 @@ export async function getCurveFromName(name) {
     throw new Error(`Curve not supported: ${name}`);
   }
   return curve;
-
-  function normalizeName(n) {
-    return n
-      .toUpperCase()
-      .match(/[A-Za-z0-9]+/g)
-      .join('');
-  }
 }

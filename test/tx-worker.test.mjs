@@ -8,7 +8,7 @@ import os from 'os';
 import Nf3 from '../cli/lib/nf3.mjs';
 import { depositNTransactions, Web3Client, waitForTimeout } from './utils.mjs';
 import {
-  numberOfUnprocessedTransactions,
+  numberOfMempoolTransactions,
   numberOfBufferedTransactions,
 } from '../nightfall-optimist/src/services/database.mjs';
 
@@ -63,7 +63,7 @@ const generateNTransactions = async () => {
     console.log('N buffered transactions', nTx);
     await waitForTimeout(1000);
   }
-  nTx = await numberOfUnprocessedTransactions();
+  nTx = await numberOfMempoolTransactions();
   console.log('Start transaction processing...');
   // enable worker processing and process transactions in tmp
   axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, { enable: true });
@@ -72,7 +72,7 @@ const generateNTransactions = async () => {
   // and number of transactions increases (first block is generated)
   while (nTx >= nTx1 && nTx < initTx) {
     nTx1 = nTx;
-    nTx = await numberOfUnprocessedTransactions();
+    nTx = await numberOfMempoolTransactions();
     console.log('N Unprocessed transactions', nTx);
     await waitForTimeout(100);
   }
