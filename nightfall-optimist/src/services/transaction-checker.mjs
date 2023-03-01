@@ -13,7 +13,7 @@ import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { decompressProof } from '@polygon-nightfall/common-files/utils/curve-maths/curves.mjs';
-import groth16Verify from './groth16_verify.mjs';
+import groth16Verify from '../utils/groth16_verify.mjs';
 import { VerificationKey, Proof, TransactionError } from '../classes/index.mjs';
 import {
   getBlockByBlockNumberL2,

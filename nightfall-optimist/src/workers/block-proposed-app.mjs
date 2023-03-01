@@ -15,14 +15,11 @@ async function initWorkers() {
 
   // End point to submit block to block proposed worker
   app.get('/block-proposed', async (req, res) => {
-    console.log('RECEIVED API CALL BLOCK PROPOSED');
     // const { transactionHashL1, currentBlockCount, block, transactions } = req.query;
     const { blockNumberL2 } = req.query;
-    console.log('BLOCK PROPOSED BODY', req.query);
     const { _id, transactionHashL1, currentBlockCount, transactions, ...block } = await getRxBlock(
       Number(req.query.blockNumberL2),
     );
-    console.log('Block XXXXX ', block.blockNumberL2);
     deleteRxBlock(Number(blockNumberL2));
 
     try {

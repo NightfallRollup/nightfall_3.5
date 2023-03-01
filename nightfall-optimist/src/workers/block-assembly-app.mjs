@@ -21,11 +21,7 @@ async function initWorkers() {
 
   // End point to submit block to block proposed worker
   app.get('/block-assembly', async (req, res) => {
-    console.log('RECEIVED API CALL BLOCK ASSEMBLY');
-    // const { transactionHashL1, currentBlockCount, block, transactions } = req.query;
     const { proposer } = req.query;
-    console.log('BLOCK ASSEMBLY BODY', req.query);
-
     try {
       await conditionalMakeBlock(proposer);
       res.sendStatus(200);
@@ -36,8 +32,6 @@ async function initWorkers() {
 
   // End point to submit block to block proposed worker
   app.get('/rollback-completed', async (req, res) => {
-    console.log('RECEIVED API ROLLBACK COMPLETED');
-
     try {
       await requestSignalRollbackCompleted();
       res.sendStatus(200);

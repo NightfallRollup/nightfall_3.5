@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /*
     Copyright 2018 0kims association.
     This file is part of snarkjs.
@@ -14,8 +15,7 @@
 */
 
 /* Implementation of this paper: https://eprint.iacr.org/2016/260.pdf */
-import { Scalar } from 'ffjavascript';
-import { utils } from 'ffjavascript';
+import { Scalar, utils } from 'ffjavascript';
 import * as curves from './curves.mjs';
 
 const { unstringifyBigInts } = utils;
@@ -39,7 +39,6 @@ function getVks(circuitHash, vk_verifier) {
   if (!(circuitHash in _vk_beta_2))
     _vk_beta_2[circuitHash] = _curve.G2.fromObject(vk_verifier.vk_beta_2);
 
-  //console.log('XXXXXXXXXXXXX GET VKs');
   return [
     _vk_gamma_2[circuitHash],
     _vk_delta_2[circuitHash],
@@ -84,15 +83,12 @@ export default async function groth16Verify(
   const vk_verifier = getVkVerifier(circuitHash, _vk_verifier);
   const proof = unstringifyBigInts(_proof);
   const publicSignals = unstringifyBigInts(_publicSignals);
-  //console.log('XXXXXXXXXXX SEIGN', publicSignals, _publicSignals);
 
   // cache curve
   if (_curve === null) _curve = await curves.getCurveFromName(vk_verifier.curve);
-  //console.log('XXXXXXXXXXXXXXXX _curve');
 
   // cache vks
   const [vk_gamma_2, vk_delta_2, vk_alpha_1, vk_beta_2] = getVks(circuitHash, vk_verifier);
-  //console.log('XXXXXXXXXXX', vk_gamma_2);
 
   const IC0 = getIC0(circuitHash, vk_verifier);
 
@@ -111,8 +107,6 @@ export default async function groth16Verify(
   const pi_a = _curve.G1.fromObject(proof.pi_a);
   const pi_b = _curve.G2.fromObject(proof.pi_b);
   const pi_c = _curve.G1.fromObject(proof.pi_c);
-
-  //console.log('XXXXXXXX', pi_a, proof.pi_a, _proof, publicSignals.length);
 
   const res = await _curve.pairingEq(
     _curve.G1.neg(pi_a),
