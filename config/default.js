@@ -70,7 +70,6 @@ module.exports = {
   TX_WORKER_PARAMS: {
     txWorkerCount: process.env.TX_WORKER_COUNT || 100,
     txWorkerUrl: process.env.TX_WORKER_URL || 'http://172.17.0.1:3000',
-    txWorkerOptimistApiUrl: process.env.TX_WORKER_OPTIMIST_API_URL || 'http://localhost:80',
   },
   BLOCK_PROPOSED_WORKER_PARAMS: {
     blockProposedWorkerCount: process.env.BLOCK_PROPOSED_WORKER_COUNT || 1,
@@ -334,7 +333,6 @@ module.exports = {
       optimist1: process.env.OPTIMIST1_WS_URL || 'ws://localhost:9090',
       optimist2: process.env.OPTIMIST2_WS_URL || 'ws://localhost:9092',
     },
-    NUMBER_L2_BLOCKS: process.env.NUMBER_L2_BLOCKS || 4,
     signingKeys: {
       walletTest:
         process.env.WALLET_TEST_KEY ||

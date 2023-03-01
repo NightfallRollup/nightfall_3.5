@@ -7,7 +7,7 @@ RUN apt-get update \
     python3 make g++ netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 80 8080 9229 
+EXPOSE 80 8080 9229
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 

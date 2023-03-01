@@ -41,6 +41,8 @@ export function setBlockProposedWebSocketConnection(_ws) {
   ws = _ws;
 }
 
+// Handles a block proposed  event. blockProposed is executed by a separate process, so updates 
+//  to any variable will only take place in this process
 export async function blockProposed({ transactionHashL1, currentBlockCount, block, transactions }) {
   logger.debug({
     msg: 'Received BlockProposed Worker call',
@@ -65,13 +67,11 @@ export async function blockProposed({ transactionHashL1, currentBlockCount, bloc
     // In which case this handler is being called be the resync code. either way, we need to add the transaction.
     // let's use transactionSubmittedEventHandler to do this because it will perform all the duties associated
     // with saving a transaction.
-    logger.info('Saving Transactions xxxxxxxxx');
     await Promise.all(
       transactions.map(async tx =>
         saveTransaction({ ...tx, blockNumberL2: block.blockNumberL2, mempool: false }),
       ),
     );
-    logger.info('Saving Transactions xxxxxxxxx done');
 
     const blockCommitments = transactions
       .map(t => t.commitments.filter(c => c !== ZERO))
@@ -188,10 +188,11 @@ export async function blockProposedEventHandler(data) {
 
   lastInOrderL1Block = currentBlockCount;
 
-  // If BLOCK PROPOSED WORKERS enabled or not responsive, route transaction requests to main thread
-  console.log('blockProposedWorkerCount', Number(blockProposedWorkerCount), blockProposedWorkerUrl);
+  // If BLOCK PROPOSED WORKERS enabled, dispatch event to workers
+  //  else, or if not responsive, event is processed by main thread
   if (Number(blockProposedWorkerCount)) {
-    console.log('BLOCKPROPSOED WORKER CO', blockProposedWorkerCount, blockProposedWorkerUrl);
+    // To avoid passing large amount of data through REST API, for now it is written to DB. 
+    //   Think of a better alternative later
     await saveRxBlock({ currentBlockCount, transactionHashL1, ...block, transactions });
     axios
       .get(`${blockProposedWorkerUrl}/block-proposed`, {

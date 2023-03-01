@@ -25,7 +25,6 @@ const {
   tokenConfigs: { tokenType, tokenId },
   mnemonics,
   signingKeys,
-  NUMBER_L2_BLOCKS,
 } = config.TEST_OPTIONS;
 
 const txPerBlock = process.env.TRANSACTIONS_PER_BLOCK || 32;

@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
+
+# Launch Block Proposed Workers
 if [ "${TX_WORKER_COUNT}" ]; then
   mkdir -p /tmp
-  # TX_WORKER_DOCKER sets docker mode to 1
-  TX_WORKER_DOCKER=1 node /app/src/workers/transaction-submitted-app.mjs > /tmp/worker.txt &
+  node /app/src/workers/transaction-submitted-app.mjs > /tmp/worker.txt &
+fi
+# Launch Block Proposed Workers
+if [ "${BLOCK_PROPOSED_WORKER_COUNT}" ]; then
+  mkdir -p /tmp
+  node /app/src/workers/block-proposed-app.mjs > /tmp/block-proposed-worker.txt &
 fi
 exec "$@"
