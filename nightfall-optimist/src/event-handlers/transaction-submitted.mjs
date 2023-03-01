@@ -189,10 +189,7 @@ export async function transactionSubmittedEventHandler(eventParams) {
       })
       .catch(function (error) {
         logger.error(`Error submit tx worker ${error}`);
-        // Main thread (no workers)
-        if (error.request) {
-          submitTransaction(transaction, _submitTransactionEnable);
-        }
+        submitTransaction(transaction, _submitTransactionEnable);
       });
   } else {
     // Main thread (no workers)

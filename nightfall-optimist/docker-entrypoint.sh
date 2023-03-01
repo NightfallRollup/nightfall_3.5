@@ -9,6 +9,14 @@ fi
 if [ "${TX_WORKER_COUNT}" ]; then
   mkdir -p /tmp
   # TX_WORKER_DOCKER sets docker mode to 1
-  TX_WORKER_DOCKER=1 node /app/src/workers/transaction-submitted-app.mjs > /tmp/worker.txt &
+  TX_WORKER_DOCKER=1 node /app/src/workers/transaction-submitted-app.mjs > /tmp/transaction-submitted-worker.txt &
 fi
+if [ "${BLOCK_PROPOSED_WORKER_COUNT}" ]; then
+  mkdir -p /tmp
+  node /app/src/workers/block-proposed-app.mjs > /tmp/block-proposed-worker.txt &
+fi
+#if [ "${BLOCK_ASSEMBLY_WORKER_COUNT}" ]; then
+  #mkdir -p /tmp
+  #node /app/src/workers/block-assembly-app.mjs > /tmp/block-assembly-worker.txt &
+#fi
 exec "$@"

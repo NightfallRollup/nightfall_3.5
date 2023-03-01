@@ -1,6 +1,7 @@
 /* eslint-disable import/no-cycle */
 import WebSocket from 'ws';
 import config from 'config';
+import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import Timber from '@polygon-nightfall/common-files/classes/timber.mjs';
 import { getTimeByBlock } from '@polygon-nightfall/common-files/utils/block-utils.mjs';
@@ -17,6 +18,7 @@ import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
   getNumberOfL2Blocks,
+  saveRxBlock,
 } from '../services/database.mjs';
 import { getProposeBlockCalldata } from '../services/process-calldata.mjs';
 import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
@@ -26,6 +28,7 @@ import Proposer from '../classes/proposer.mjs';
 
 const { TIMBER_HEIGHT, HASH_TYPE } = config;
 const { ZERO } = constants;
+const { blockProposedWorkerUrl, blockProposedWorkerCount } = config.BLOCK_PROPOSED_WORKER_PARAMS;
 
 let ws;
 // Stores latest L1 block correctly synchronized to speed possible resyncs
@@ -38,54 +41,14 @@ export function setBlockProposedWebSocketConnection(_ws) {
   ws = _ws;
 }
 
-/**
-This handler runs whenever a BlockProposed event is emitted by the blockchain
-*/
-async function blockProposedEventHandler(data) {
-  const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
-  const { block, transactions } = await getProposeBlockCalldata(data);
-  const nextBlockNumberL2 = await getNumberOfL2Blocks();
-
-  // If a service is subscribed to this websocket and listening for events.
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    await ws.send(
-      JSON.stringify({
-        type: 'blockProposed',
-        data: {
-          blockNumber: currentBlockCount,
-          transactionHash: transactionHashL1,
-          block,
-          transactions,
-        },
-      }),
-    );
-  }
-
+export async function blockProposed({ transactionHashL1, currentBlockCount, block, transactions }) {
   logger.debug({
-    msg: 'Received BlockProposed event',
-    receivedBlockNumberL2: block.blockNumberL2,
-    expectedBlockNumberL2: nextBlockNumberL2,
+    msg: 'Received BlockProposed Worker call',
+    transactionHashL1,
+    currentBlockCount,
+    block,
     transactions,
   });
-
-  // Check resync attempts
-  if (consecutiveResyncAttempts > 10) {
-    lastInOrderL1Block = 'earliest';
-    consecutiveResyncAttempts = 0;
-  }
-
-  // If an out of order L2 block is detected,
-  // WARNING: if we ever reach this scenario, this optimist may have built a block based
-  //  in an incorrect state and will be challengeable
-  if (block.blockNumberL2 > nextBlockNumberL2) {
-    consecutiveResyncAttempts++;
-    logger.debug('Resyncing...');
-    const proposer = new Proposer();
-    await syncState(proposer, lastInOrderL1Block);
-  }
-
-  lastInOrderL1Block = currentBlockCount;
-
   // We get the L1 block time in order to save it in the database to have this information available
   let timeBlockL2 = await getTimeByBlock(transactionHashL1);
   timeBlockL2 = new Date(timeBlockL2 * 1000);
@@ -177,4 +140,71 @@ async function blockProposedEventHandler(data) {
   }
 }
 
-export default blockProposedEventHandler;
+/**
+This handler runs whenever a BlockProposed event is emitted by the blockchain
+*/
+export async function blockProposedEventHandler(data) {
+  const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
+  const { block, transactions } = await getProposeBlockCalldata(data);
+  const nextBlockNumberL2 = await getNumberOfL2Blocks();
+
+  // If a service is subscribed to this websocket and listening for events.
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    await ws.send(
+      JSON.stringify({
+        type: 'blockProposed',
+        data: {
+          blockNumber: currentBlockCount,
+          transactionHash: transactionHashL1,
+          block,
+          transactions,
+        },
+      }),
+    );
+  }
+
+  logger.debug({
+    msg: 'Received BlockProposed event',
+    receivedBlockNumberL2: block.blockNumberL2,
+    expectedBlockNumberL2: nextBlockNumberL2,
+    transactions,
+  });
+
+  // Check resync attempts
+  if (consecutiveResyncAttempts > 10) {
+    lastInOrderL1Block = 'earliest';
+    consecutiveResyncAttempts = 0;
+  }
+
+  // If an out of order L2 block is detected,
+  // WARNING: if we ever reach this scenario, this optimist may have built a block based
+  //  in an incorrect state and will be challengeable
+  if (block.blockNumberL2 > nextBlockNumberL2) {
+    consecutiveResyncAttempts++;
+    logger.debug('Resyncing...');
+    const proposer = new Proposer();
+    await syncState(proposer, lastInOrderL1Block);
+  }
+
+  lastInOrderL1Block = currentBlockCount;
+
+  // If BLOCK PROPOSED WORKERS enabled or not responsive, route transaction requests to main thread
+  console.log('blockProposedWorkerCount', Number(blockProposedWorkerCount), blockProposedWorkerUrl);
+  if (Number(blockProposedWorkerCount)) {
+    console.log('BLOCKPROPSOED WORKER CO', blockProposedWorkerCount, blockProposedWorkerUrl);
+    await saveRxBlock({ currentBlockCount, transactionHashL1, ...block, transactions });
+    axios
+      .get(`${blockProposedWorkerUrl}/block-proposed`, {
+        params: {
+          blockNumberL2: block.blockNumberL2,
+        },
+      })
+      .catch(async function (error) {
+        logger.error(`Error block proposed tx worker ${error}`);
+        await blockProposed({ transactionHashL1, currentBlockCount, block, transactions });
+      });
+  } else {
+    // Main thread (no workers)
+    await blockProposed({ transactionHashL1, currentBlockCount, block, transactions });
+  }
+}

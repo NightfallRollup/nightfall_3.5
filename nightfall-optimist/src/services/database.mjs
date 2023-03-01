@@ -23,6 +23,7 @@ const {
   TIMBER_HEIGHT,
   HASH_TYPE,
   BUFFERED_TRANSACTIONS_COLLECTION,
+  BLOCKS_RECEIVED_COLLECTION,
 } = config;
 
 /**
@@ -73,6 +74,36 @@ export async function saveBlock(_block) {
   const update = { $set: block };
 
   return db.collection(SUBMITTED_BLOCKS_COLLECTION).updateOne(query, update, { upsert: true });
+}
+
+export async function saveRxBlock(_block) {
+  const block = { _id: _block.blockHash, ..._block };
+
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+
+  const query = { blockHash: block.blockHash };
+  const update = { $set: block };
+
+  console.log('BLOCK WRITE', block);
+
+  return db.collection(BLOCKS_RECEIVED_COLLECTION).updateOne(query, update, { upsert: true });
+}
+export async function getRxBlock(blockNumberL2) {
+  console.log('BLOCK READ', blockNumberL2, typeof blockNumberL2);
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+
+  const query = { blockNumberL2 };
+  return db.collection(BLOCKS_RECEIVED_COLLECTION).findOne(query);
+}
+export async function deleteRxBlock(blockNumberL2) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+
+  const query = { blockNumberL2 };
+  console.log("DELETE BLOCKS", blockNumberL2)
+  return db.collection(BLOCKS_RECEIVED_COLLECTION).deleteOne(query);
 }
 
 /**
@@ -268,7 +299,7 @@ export async function deleteRegisteredProposerAddress(address) {
 export async function getAllRegisteredProposersCount() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
-  return db.collection(PROPOSER_COLLECTION).count();
+  return db.collection(PROPOSER_COLLECTION).countDocuments();
 }
 
 /**
@@ -320,11 +351,13 @@ export async function saveBufferedTransaction(_transaction) {
 export async function findAndDeleteAllBufferedTransactions() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
-  const returnedTransactions = await db
-    .collection(BUFFERED_TRANSACTIONS_COLLECTION)
-    .find()
-    .toArray();
-  db.collection(BUFFERED_TRANSACTIONS_COLLECTION).drop();
+  let returnedTransactions;
+  try {
+    returnedTransactions = await db.collection(BUFFERED_TRANSACTIONS_COLLECTION).find().toArray();
+    db.collection(BUFFERED_TRANSACTIONS_COLLECTION).drop();
+  } catch (err) {
+    logger.error({ msg: 'Error droping collection', err });
+  }
   return returnedTransactions;
 }
 
@@ -334,7 +367,11 @@ export async function findAndDeleteAllBufferedTransactions() {
 export async function numberOfBufferedTransactions() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
-  return db.collection(BUFFERED_TRANSACTIONS_COLLECTION).countDocuments();
+  try {
+    return db.collection(BUFFERED_TRANSACTIONS_COLLECTION).countDocuments();
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -594,7 +631,7 @@ Timber functions
 export async function getNumberOfL2Blocks() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
-  return db.collection(TIMBER_COLLECTION).find().count();
+  return db.collection(TIMBER_COLLECTION).countDocuments();
 }
 
 export async function saveTree(blockNumber, blockNumberL2, timber) {

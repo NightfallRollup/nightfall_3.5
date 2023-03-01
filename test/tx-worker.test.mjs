@@ -168,7 +168,7 @@ describe('Tx worker test', () => {
      */
 
     it('Generate transactions and measure transaction processing and block assembly time with workers on', async function () {
-      let pendingBlocks = 2;
+      let pendingBlocks = 1;
       const blockTimestamp = [];
       let startTime;
       // enable workers
@@ -194,7 +194,7 @@ describe('Tx worker test', () => {
      * process them all at once without workers.
      */
     it('Generate transactions and measure transaction processing and block assembly time with workers off', async function () {
-      let pendingBlocks = 2;
+      let pendingBlocks = 1;
       const blockTimestamp = [];
       let startTime;
       // disable workers

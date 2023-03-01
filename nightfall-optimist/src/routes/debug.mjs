@@ -42,8 +42,8 @@ router.post('/tx-submitted-enable', async (req, res) => {
   // If we enable  submitTransactions, we process al events in the buffer
   if (enable) {
     submitTransactionEnable(true);
-    const transactions = await findAndDeleteAllBufferedTransactions();
-    console.log('Transactions XXXXXXXXXXXX', transactions[0]);
+    const transactions = (await findAndDeleteAllBufferedTransactions()) ?? [];
+    console.log('Transactions XXXXXXXXXXXX', transactions);
 
     if (Number(txWorkerCount) && workerEnableGet()) {
       transactions.forEach(async tx =>

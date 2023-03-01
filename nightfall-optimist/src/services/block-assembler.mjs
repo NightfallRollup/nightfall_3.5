@@ -6,6 +6,7 @@
  */
 import WebSocket from 'ws';
 import config from 'config';
+import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { waitForTimeout } from '@polygon-nightfall/common-files/utils/utils.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
@@ -22,6 +23,7 @@ import {
 const { MAX_BLOCK_SIZE, MINIMUM_TRANSACTION_SLOTS, PROPOSER_MAX_BLOCK_PERIOD_MILIS } = config;
 const { STATE_CONTRACT_NAME } = constants;
 
+const { blockAssemblyWorkerUrl, blockAssemblyWorkerCount } = config.BLOCK_ASSEMBLY_WORKER_PARAMS;
 let ws;
 let makeNow = false;
 let lastBlockTimestamp = new Date().getTime();
@@ -66,6 +68,39 @@ async function makeBlock(proposer, transactions) {
   return Block.build({ proposer, transactions });
 }
 
+async function sendBlockToProposer(unsignedProposeBlockTransaction, block, transactions) {
+  let count = 0;
+  while (!ws || ws.readyState !== WebSocket.OPEN) {
+    await waitForTimeout(3000); // eslint-disable-line no-await-in-loop
+
+    logger.warn(`Websocket to proposer is closed. Waiting for proposer to reconnect`);
+
+    increaseProposerWsClosed();
+    if (count++ > 100) {
+      increaseProposerWsFailed();
+
+      logger.error(`Websocket to proposer has failed. Returning...`);
+      return;
+    }
+  }
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    await ws.send(
+      JSON.stringify({
+        type: 'block',
+        txDataToSign: unsignedProposeBlockTransaction,
+        block,
+        transactions,
+      }),
+    );
+    logger.debug('Send unsigned block-assembler transactions to ws client');
+  } else {
+    increaseProposerBlockNotSent();
+
+    if (ws) logger.debug({ msg: 'Block not sent', socketState: ws.readyState });
+    else logger.debug('Block not sent. Non-initialized socket');
+  }
+}
 /**
  * This function will make a block iff I am the proposer and there are enough
  * transactions in the database to assembke a block from. It loops until told to
@@ -187,38 +222,7 @@ export async function conditionalMakeBlock(proposer) {
 
         // check that the websocket exists (it should) and its readyState is OPEN
         // before sending Proposed block. If not wait until the proposer reconnects
-        let count = 0;
-        while (!ws || ws.readyState !== WebSocket.OPEN) {
-          await waitForTimeout(3000); // eslint-disable-line no-await-in-loop
-
-          logger.warn(`Websocket to proposer is closed. Waiting for proposer to reconnect`);
-
-          increaseProposerWsClosed();
-          if (count++ > 100) {
-            increaseProposerWsFailed();
-
-            logger.error(`Websocket to proposer has failed. Returning...`);
-            return;
-          }
-        }
-
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          await ws.send(
-            JSON.stringify({
-              type: 'block',
-              txDataToSign: unsignedProposeBlockTransaction,
-              block,
-              transactions,
-            }),
-          );
-          logger.debug('Send unsigned block-assembler transactions to ws client');
-        } else {
-          increaseProposerBlockNotSent();
-
-          if (ws) logger.debug({ msg: 'Block not sent', socketState: ws.readyState });
-          else logger.debug('Block not sent. Non-initialized socket');
-        }
-
+        await sendBlockToProposer(unsignedProposeBlockTransaction, block, transactions);
         // remove the transactions from the mempool so we don't keep making new
         // blocks with them
         await removeTransactionsFromMemPool(block.transactionHashes);
@@ -227,4 +231,38 @@ export async function conditionalMakeBlock(proposer) {
   }
   // Let's slow down here so we don't slam the database.
   await waitForTimeout(3000);
+}
+
+export async function requestMakeBlock(proposer) {
+  // If Block Assembly WORKERS enabled or not responsive, route transaction requests to main thread
+  console.log('BLOCK ASSEMBLY CALL', blockAssemblyWorkerCount, blockAssemblyWorkerUrl, proposer);
+  if (Number(blockAssemblyWorkerCount)) {
+    axios
+      .get(`${blockAssemblyWorkerUrl}/block-assembly`, {
+        params: {
+          proposer,
+        },
+      })
+      .catch(async function (error) {
+        logger.error(`Error submit block assembly worker ${error}`);
+        await conditionalMakeBlock(proposer);
+      });
+  } else {
+    // Main thread (no workers)
+    await conditionalMakeBlock(proposer);
+  }
+}
+
+export async function requestSignalRollbackCompleted() {
+  // If Block Assembly WORKERS enabled or not responsive, route transaction requests to main thread
+  console.log('REQUST SIGNAL ROLLBACK');
+  if (Number(blockAssemblyWorkerCount)) {
+    axios.get(`${blockAssemblyWorkerUrl}/rollback-completed`).catch(async function (error) {
+      logger.error(`Error submit signal rollbacl to proposer worker ${error}`);
+      await signalRollbackCompleted();
+    });
+  } else {
+    // Main thread (no workers)
+    await signalRollbackCompleted();
+  }
 }

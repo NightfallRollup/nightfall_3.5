@@ -55,6 +55,7 @@ module.exports = {
   CHALLENGER_COLLECTION: 'challengers',
   TRANSACTIONS_COLLECTION: 'transactions',
   BUFFERED_TRANSACTIONS_COLLECTION: 'transactions_buffered',
+  BLOCKS_RECEIVED_COLLECTION: 'blocks_received',
   SUBMITTED_BLOCKS_COLLECTION: 'blocks',
   INVALID_BLOCKS_COLLECTION: 'invalid_blocks',
   COMMIT_COLLECTION: 'commits',
@@ -70,6 +71,14 @@ module.exports = {
     txWorkerCount: process.env.TX_WORKER_COUNT || 100,
     txWorkerUrl: process.env.TX_WORKER_URL || 'http://172.17.0.1:3000',
     txWorkerOptimistApiUrl: process.env.TX_WORKER_OPTIMIST_API_URL || 'http://localhost:80',
+  },
+  BLOCK_PROPOSED_WORKER_PARAMS: {
+    blockProposedWorkerCount: process.env.BLOCK_PROPOSED_WORKER_COUNT || 1,
+    blockProposedWorkerUrl: process.env.BLOCK_PROPOSED_WORKER_URL || 'http://172.17.0.1:4000',
+  },
+  BLOCK_ASSEMBLY_WORKER_PARAMS: {
+    blockAssemblyWorkerCount: process.env.BLOCK_ASSEMBLY_WORKER_COUNT || 1,
+    blockAssemblyWorkerUrl: process.env.BLOCK_ASSEMBLY_WORKER_URL || 'http://172.17.0.1:5000',
   },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,
