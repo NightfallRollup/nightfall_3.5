@@ -23,7 +23,6 @@ const {
   TIMBER_HEIGHT,
   HASH_TYPE,
   BUFFERED_TRANSACTIONS_COLLECTION,
-  BLOCKS_RECEIVED_COLLECTION,
 } = config;
 
 /**
@@ -444,6 +443,15 @@ export async function getMempoolTransactionByNullifier(nullifierHash, transactio
 }
 
 /**
+function to look a transaction by blockNumberL2
+*/
+export async function getTransactionByBlockNumberL2(blockNumberL2) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const query = { blockNumberL2 };
+  return db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
+}
+/**
 function to look a transaction by transactionHash, if you know the hash of the transaction.
 */
 export async function getTransactionByTransactionHash(transactionHash) {
@@ -540,8 +548,6 @@ export async function getTransactionL2ByNullifier(nullifierHash, blockNumberL2Of
   const query = {
     nullifiers: { $in: [nullifierHash] },
     blockNumberL2: { $gt: -1, $ne: blockNumberL2OfTx },
-    // Think about combining this query
-    // $or: [{ blockNumberL2: { $gt: -1, $ne: blockNumberL2OfTx } }, { mempool: true }],
   };
   return db.collection(TRANSACTIONS_COLLECTION).findOne(query);
 }
@@ -713,34 +719,4 @@ export async function findAndDeleteAllBufferedTransactions() {
     returnedTransactions = [];
   }
   return returnedTransactions;
-}
-
-// BLOCKS RECEIVED COLLECTION is used as a temporary storage to pass
-//  blocks and transactions between main process and block proposed process
-export async function saveRxBlock(_block) {
-  const block = { _id: _block.blockHash, ..._block };
-
-  const connection = await mongo.connection(MONGO_URL);
-  const db = connection.db(OPTIMIST_DB);
-
-  const query = { blockHash: block.blockHash };
-  const update = { $set: block };
-
-  return db.collection(BLOCKS_RECEIVED_COLLECTION).updateOne(query, update, { upsert: true });
-}
-
-export async function getRxBlock(blockNumberL2) {
-  const connection = await mongo.connection(MONGO_URL);
-  const db = connection.db(OPTIMIST_DB);
-
-  const query = { blockNumberL2 };
-  return db.collection(BLOCKS_RECEIVED_COLLECTION).findOne(query);
-}
-
-export async function deleteRxBlock(blockNumberL2) {
-  const connection = await mongo.connection(MONGO_URL);
-  const db = connection.db(OPTIMIST_DB);
-
-  const query = { blockNumberL2 };
-  return db.collection(BLOCKS_RECEIVED_COLLECTION).deleteOne(query);
 }

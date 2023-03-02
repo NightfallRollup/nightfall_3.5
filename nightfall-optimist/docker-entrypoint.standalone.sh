@@ -6,8 +6,7 @@ if [ "${TX_WORKER_COUNT}" ]; then
   node /app/src/workers/transaction-submitted-app.mjs > /tmp/worker.txt &
 fi
 # Launch Block Proposed Workers
-if [ "${BLOCK_PROPOSED_WORKER_COUNT}" ]; then
-  mkdir -p /tmp
-  node /app/src/workers/block-proposed-app.mjs > /tmp/block-proposed-worker.txt &
-fi
+mkdir -p /tmp
+node /app/src/workers/block-proposed-app.mjs > /tmp/block-proposed-worker.txt &
+
 exec "$@"

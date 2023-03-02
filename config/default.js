@@ -55,7 +55,6 @@ module.exports = {
   CHALLENGER_COLLECTION: 'challengers',
   TRANSACTIONS_COLLECTION: 'transactions',
   BUFFERED_TRANSACTIONS_COLLECTION: 'transactions_buffered',
-  BLOCKS_RECEIVED_COLLECTION: 'blocks_received',
   SUBMITTED_BLOCKS_COLLECTION: 'blocks',
   INVALID_BLOCKS_COLLECTION: 'invalid_blocks',
   COMMIT_COLLECTION: 'commits',
@@ -72,7 +71,6 @@ module.exports = {
     txWorkerUrl: process.env.TX_WORKER_URL || 'http://172.17.0.1:3000',
   },
   BLOCK_PROPOSED_WORKER_PARAMS: {
-    blockProposedWorkerCount: process.env.BLOCK_PROPOSED_WORKER_COUNT || 1,
     blockProposedWorkerUrl: process.env.BLOCK_PROPOSED_WORKER_URL || 'http://172.17.0.1:4000',
   },
   BLOCK_ASSEMBLY_WORKER_PARAMS: {

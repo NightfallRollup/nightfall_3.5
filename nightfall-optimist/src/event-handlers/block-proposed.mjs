@@ -18,17 +18,17 @@ import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
   getNumberOfL2Blocks,
-  saveRxBlock,
+  getBlockByBlockNumberL2,
+  getTransactionByBlockNumberL2,
 } from '../services/database.mjs';
 import { getProposeBlockCalldata } from '../services/process-calldata.mjs';
 import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
-import { setLastProcessedBlockNumberL2 } from '../services/transaction-checker.mjs';
 import { syncState } from '../services/state-sync.mjs';
 import Proposer from '../classes/proposer.mjs';
 
 const { TIMBER_HEIGHT, HASH_TYPE } = config;
 const { ZERO } = constants;
-const { blockProposedWorkerUrl, blockProposedWorkerCount } = config.BLOCK_PROPOSED_WORKER_PARAMS;
+const { blockProposedWorkerUrl } = config.BLOCK_PROPOSED_WORKER_PARAMS;
 
 let ws;
 // Stores latest L1 block correctly synchronized to speed possible resyncs
@@ -41,72 +41,23 @@ export function setBlockProposedWebSocketConnection(_ws) {
   ws = _ws;
 }
 
-// Handles a block proposed  event. blockProposed is executed by a separate process, so updates 
+// Handles a block proposed  event. blockProposed is executed by a separate process, so updates
 //  to any variable will only take place in this process
-export async function blockProposed({ transactionHashL1, currentBlockCount, block, transactions }) {
+export async function blockProposed(blockNumberL2) {
+  const [block, tx] = await Promise.all([
+    getBlockByBlockNumberL2(blockNumberL2),
+    getTransactionByBlockNumberL2(blockNumberL2),
+  ]);
+
+  const transactions = tx.filter(t => t.mempool === false);
+
   logger.debug({
     msg: 'Received BlockProposed Worker call',
-    transactionHashL1,
-    currentBlockCount,
     block,
     transactions,
   });
-  // We get the L1 block time in order to save it in the database to have this information available
-  let timeBlockL2 = await getTimeByBlock(transactionHashL1);
-  timeBlockL2 = new Date(timeBlockL2 * 1000);
+
   try {
-    // save the block to facilitate later lookup of block data
-    // we will save before checking because the database at any time should reflect the state the blockchain holds
-    // when a challenge is raised because the is correct block data, then the corresponding block deleted event will
-    // update this collection
-    await saveBlock({ blockNumber: currentBlockCount, transactionHashL1, timeBlockL2, ...block });
-
-    // It's possible that some of these transactions are new to us. That's because they were
-    // submitted by someone directly to another proposer and so there was never a TransactionSubmitted
-    // event associated with them. Either that, or we lost our database and had to resync from the chain.
-    // In which case this handler is being called be the resync code. either way, we need to add the transaction.
-    // let's use transactionSubmittedEventHandler to do this because it will perform all the duties associated
-    // with saving a transaction.
-    await Promise.all(
-      transactions.map(async tx =>
-        saveTransaction({ ...tx, blockNumberL2: block.blockNumberL2, mempool: false }),
-      ),
-    );
-
-    const blockCommitments = transactions
-      .map(t => t.commitments.filter(c => c !== ZERO))
-      .flat(Infinity);
-    const blockNullifiers = transactions
-      .map(t => t.nullifiers.filter(c => c !== ZERO))
-      .flat(Infinity);
-
-    await deleteDuplicateCommitmentsAndNullifiersFromMemPool(
-      blockCommitments,
-      blockNullifiers,
-      block.transactionHashes,
-    );
-
-    const latestTree = await getTreeByBlockNumberL2(block.blockNumberL2 - 1);
-    const updatedTimber = Timber.statelessUpdate(
-      latestTree,
-      blockCommitments,
-      HASH_TYPE,
-      TIMBER_HEIGHT,
-    );
-    const res = await saveTree(currentBlockCount, block.blockNumberL2, updatedTimber);
-    setLastProcessedBlockNumberL2(block.blockNumberL2);
-    logger.debug(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
-    // signal to the block-making routines that a block is received: they
-    // won't make a new block until their previous one is stored on-chain.
-    // we'll check the block and issue a challenge if appropriate
-    // we should not check the block if the stop queue is not empty because
-    // it signals that there is a bad block which will get challenged eventually
-    // meanwhile any new L2 blocks received if turned out to be bad blocks will
-    // raise a commit to challenge and reveal challenge which is bound to fail because
-    // a rollback from previous wrong block would have removed this anyway.
-    // Instead, what happens now is that any good/bad blocks on top of the first bad block
-    // will get saved and eventually all these blocks will be removed as part of the rollback
-    // of the first bad block
     if (queues[2].length === 0) await checkBlock(block, transactions);
     logger.info('Block Checker - Block was valid');
   } catch (err) {
@@ -120,9 +71,6 @@ export async function blockProposed({ transactionHashL1, currentBlockCount, bloc
       await saveInvalidBlock({
         invalidCode: err.code,
         invalidMessage: err.message,
-        blockNumber: currentBlockCount,
-        transactionHashL1,
-        timeBlockL2,
         ...block,
       });
       const txDataToSign = await createChallenge(block, transactions, err);
@@ -140,6 +88,21 @@ export async function blockProposed({ transactionHashL1, currentBlockCount, bloc
   }
 }
 
+async function dispatchBlockProposed(blockNumberL2) {
+  // Dispatch event to workers
+  //  else, or if not responsive, event is processed by main thread
+  axios
+    .get(`${blockProposedWorkerUrl}/block-proposed`, {
+      params: {
+        blockNumberL2,
+      },
+    })
+    .catch(async function (error) {
+      logger.error(`Error block proposed tx worker ${error}`);
+      await blockProposed(blockNumberL2);
+    });
+}
+
 /**
 This handler runs whenever a BlockProposed event is emitted by the blockchain
 */
@@ -147,6 +110,13 @@ export async function blockProposedEventHandler(data) {
   const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
   const { block, transactions } = await getProposeBlockCalldata(data);
   const nextBlockNumberL2 = await getNumberOfL2Blocks();
+
+  if (!transactionHashL1) {
+    throw new Error('Layer 2 blocks must have a valid Layer 1 transactionHash');
+  }
+  if (!currentBlockCount) {
+    throw new Error('Layer 2 blocks must have a valid Layer 1 block number');
+  }
 
   // If a service is subscribed to this websocket and listening for events.
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -188,24 +158,94 @@ export async function blockProposedEventHandler(data) {
 
   lastInOrderL1Block = currentBlockCount;
 
-  // If BLOCK PROPOSED WORKERS enabled, dispatch event to workers
-  //  else, or if not responsive, event is processed by main thread
-  if (Number(blockProposedWorkerCount)) {
-    // To avoid passing large amount of data through REST API, for now it is written to DB. 
-    //   Think of a better alternative later
-    await saveRxBlock({ currentBlockCount, transactionHashL1, ...block, transactions });
-    axios
-      .get(`${blockProposedWorkerUrl}/block-proposed`, {
-        params: {
-          blockNumberL2: block.blockNumberL2,
-        },
-      })
-      .catch(async function (error) {
-        logger.error(`Error block proposed tx worker ${error}`);
-        await blockProposed({ transactionHashL1, currentBlockCount, block, transactions });
+  // We get the L1 block time in order to save it in the database to have this information available
+  let timeBlockL2 = await getTimeByBlock(transactionHashL1);
+  timeBlockL2 = new Date(timeBlockL2 * 1000);
+
+  await Promise.all([
+    // save the block to facilitate later lookup of block data
+    // we will save before checking because the database at any time should reflect the state the blockchain holds
+    // when a challenge is raised because the is correct block data, then the corresponding block deleted event will
+    // update this collection
+    saveBlock({ blockNumber: currentBlockCount, transactionHashL1, timeBlockL2, ...block }),
+
+    // It's possible that some of these transactions are new to us. That's because they were
+    // submitted by someone directly to another proposer and so there was never a TransactionSubmitted
+    // event associated with them. Either that, or we lost our database and had to resync from the chain.
+    // In which case this handler is being called be the resync code. either way, we need to add the transaction.
+    // let's use transactionSubmittedEventHandler to do this because it will perform all the duties associated
+    // with saving a transaction.
+    ...transactions.map(tx =>
+      saveTransaction({ ...tx, blockNumberL2: block.blockNumberL2, mempool: false }),
+    ),
+  ]);
+
+  const blockCommitments = transactions
+    .map(t => t.commitments.filter(c => c !== ZERO))
+    .flat(Infinity);
+  const blockNullifiers = transactions
+    .map(t => t.nullifiers.filter(c => c !== ZERO))
+    .flat(Infinity);
+
+  const [, latestTree] = await Promise.all([
+    deleteDuplicateCommitmentsAndNullifiersFromMemPool(
+      blockCommitments,
+      blockNullifiers,
+      block.transactionHashes,
+    ),
+    getTreeByBlockNumberL2(block.blockNumberL2 - 1),
+  ]);
+
+  const updatedTimber = Timber.statelessUpdate(
+    latestTree,
+    blockCommitments,
+    HASH_TYPE,
+    TIMBER_HEIGHT,
+  );
+
+  const res = await saveTree(block.blockNumber, block.blockNumberL2, updatedTimber);
+  logger.debug(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
+
+  try {
+    // signal to the block-making routines that a block is received: they
+    // won't make a new block until their previous one is stored on-chain.
+    // we'll check the block and issue a challenge if appropriate
+    // we should not check the block if the stop queue is not empty because
+    // it signals that there is a bad block which will get challenged eventually
+    // meanwhile any new L2 blocks received if turned out to be bad blocks will
+    // raise a commit to challenge and reveal challenge which is bound to fail because
+    // a rollback from previous wrong block would have removed this anyway.
+    // Instead, what happens now is that any good/bad blocks on top of the first bad block
+    // will get saved and eventually all these blocks will be removed as part of the rollback
+    // of the first bad block
+    if (queues[2].length === 0) await checkBlock(block, transactions);
+    logger.info('Block Checker - Block was valid');
+  } catch (err) {
+    if (err instanceof BlockError) {
+      logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
+      logger.info(`Block is invalid, stopping any block production`);
+      // We enqueue an event onto the stopQueue to halt block production.
+      // This message will not be printed because event dequeuing does not run the job.
+      // This is fine as we are just using it to stop running.
+      increaseBlockInvalidCounter();
+      await saveInvalidBlock({
+        invalidCode: err.code,
+        invalidMessage: err.message,
+        ...block,
       });
-  } else {
-    // Main thread (no workers)
-    await blockProposed({ transactionHashL1, currentBlockCount, block, transactions });
+      const txDataToSign = await createChallenge(block, transactions, err);
+      // push the challenge into the stop queue.  This will stop blocks being
+      // made until the challenge has run and a rollback has happened.  We could
+      // push anything into the queue and that would work but it's useful to
+      // have the actual challenge to support syncing
+      logger.debug('enqueuing event to stop queue');
+      await enqueueEvent(commitToChallenge, 2, txDataToSign);
+      await commitToChallenge(txDataToSign);
+    } else {
+      logger.error(err.stack);
+      throw new Error(err);
+    }
   }
+
+  // await dispatchBlockProposed(block.blockNumberL2);
 }

@@ -736,6 +736,7 @@ class Nf3 {
       return new Promise((resolve, reject) => {
         userQueue.push(async () => {
           try {
+            logger.debug('Transfer transaction being processed');
             const receipt = await this.submitTransaction(
               res.data.txDataToSign,
               this.shieldContractAddress,

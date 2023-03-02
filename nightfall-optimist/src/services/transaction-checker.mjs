@@ -20,6 +20,7 @@ import {
   getTransactionHashSiblingInfo,
   getTransactionByNullifier,
   getTransactionByCommitment,
+  getNumberOfL2Blocks,
 } from './database.mjs';
 
 const { generalise } = gen;
@@ -27,12 +28,6 @@ const { PROVING_SCHEME, CURVE } = config;
 const { ZERO, STATE_CONTRACT_NAME, SHIELD_CONTRACT_NAME } = constants;
 const CACHE_VERIFICATION_KEY = new Map();
 const CACHE_FEE_L2_TOKEN_ADDRESS = new Map();
-
-let lastProcessedBlockNumberL2 = -1;
-
-export function setLastProcessedBlockNumberL2(lastBlockNumberL2) {
-  lastProcessedBlockNumberL2 = lastBlockNumberL2;
-}
 
 async function checkDuplicateCommitment({
   transaction,
@@ -185,10 +180,10 @@ async function checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2)
   if (lastValidBlockNumberL2) {
     latestBlockNumberL2 = lastValidBlockNumberL2;
   } else {
-    // TODO: getting latestBlock from contract seems not necessary as we only check that transaction
+    // getting latestBlock from contract seems not necessary as we only check that transaction
     //  block number is less or equal to real l2 block. So, we can keep a local copy of latest block
     // received.
-    latestBlockNumberL2 = lastProcessedBlockNumberL2;
+    latestBlockNumberL2 = (await getNumberOfL2Blocks()) - 1;
   }
 
   logger.debug({ msg: `Latest valid block number in L2`, latestBlockNumberL2 });

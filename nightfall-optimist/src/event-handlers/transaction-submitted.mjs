@@ -15,7 +15,7 @@ import { checkTransaction } from '../services/transaction-checker.mjs';
 import TransactionError from '../classes/transaction-error.mjs';
 import { getTransactionSubmittedCalldata } from '../services/process-calldata.mjs';
 
-const { ZERO, STATE_CONTRACT_NAME } = constants;
+const { STATE_CONTRACT_NAME } = constants;
 
 const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
 
@@ -45,7 +45,7 @@ export function submitTransactionEnable(enable) {
  */
 export async function submitTransaction(transaction, txEnable) {
   logger.info({
-    msg: 'Transaction Handler - New transaction received.',
+    msg: 'Transaction Worker - New transaction received.',
     transaction,
     txEnable,
   });
@@ -94,8 +94,6 @@ export async function submitTransaction(transaction, txEnable) {
     );
     const startTimeTxCheckTx = new Date().getTime();
 
-/*
-    // OPTIMIZED
     const nonZeroCommitmentsAndNullifiers = await checkTransaction({
       transaction,
       checkDuplicatesInL2: true,
@@ -107,25 +105,7 @@ export async function submitTransaction(transaction, txEnable) {
       deleteDuplicateCommitmentsAndNullifiersFromMemPool(nonZeroCommitments, nonZeroNullifiers),
       saveTransaction({ ...transaction }),
     ]);
-*/
-    // DEFAULT
-    await checkTransaction({
-      transaction,
-      checkDuplicatesInL2: true,
-      checkDuplicatesInMempool: true,
-    });
 
-    const transactionCommitments = transaction.commitments.filter(c => c !== ZERO);
-    const transactionNullifiers = transaction.nullifiers.filter(n => n !== ZERO);
-
-    await deleteDuplicateCommitmentsAndNullifiersFromMemPool(
-      transactionCommitments,
-      transactionNullifiers,
-    );
-
-    await saveTransaction({ ...transaction });
-
-    // END
     console.log(
       'Transaction check time RRRRRR',
       new Date().getTime() - startTimeTxCheckTx,
@@ -188,7 +168,7 @@ export async function transactionSubmittedEventHandler(eventParams) {
         },
       })
       .catch(function (error) {
-        logger.error(`Error submit tx worker ${error}`);
+        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
         submitTransaction(transaction, _submitTransactionEnable);
       });
   } else {

@@ -11,11 +11,10 @@ if [ "${TX_WORKER_COUNT}" ]; then
   mkdir -p /tmp
   node /app/src/workers/transaction-submitted-app.mjs > /tmp/transaction-submitted-worker.txt &
 fi
+
 # Launch Block Proposed Workers
-if [ "${BLOCK_PROPOSED_WORKER_COUNT}" ]; then
-  mkdir -p /tmp
-  node /app/src/workers/block-proposed-app.mjs > /tmp/block-proposed-worker.txt &
-fi
+#mkdir -p /tmp
+#node /app/src/workers/block-proposed-app.mjs > /tmp/block-proposed-worker.txt &
 # Launch Block Assembly  Workers 
 # Block Assembly workers are disabled because there is a problem with the websockets. I will disable for now,
 #   but leave the code just in case
