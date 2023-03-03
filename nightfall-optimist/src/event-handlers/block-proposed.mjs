@@ -17,8 +17,6 @@ import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
   getNumberOfL2Blocks,
-  getBlockByBlockNumberL2,
-  getTransactionByBlockNumberL2,
 } from '../services/database.mjs';
 import { getProposeBlockCalldata } from '../services/process-calldata.mjs';
 import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
@@ -39,57 +37,10 @@ export function setBlockProposedWebSocketConnection(_ws) {
   ws = _ws;
 }
 
-// Handles a block proposed  event. blockProposed is executed by a separate process, so updates
-//  to any variable will only take place in this process
-export async function blockProposed(blockNumberL2) {
-  const [block, tx] = await Promise.all([
-    getBlockByBlockNumberL2(blockNumberL2),
-    getTransactionByBlockNumberL2(blockNumberL2),
-  ]);
-
-  const transactions = tx.filter(t => t.mempool === false);
-
-  logger.debug({
-    msg: 'Received BlockProposed Worker call',
-    block,
-    transactions,
-  });
-
-  try {
-    if (queues[2].length === 0) await checkBlock(block, transactions);
-    logger.info('Block Checker - Block was valid');
-  } catch (err) {
-    if (err instanceof BlockError) {
-      logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
-      logger.info(`Block is invalid, stopping any block production`);
-      // We enqueue an event onto the stopQueue to halt block production.
-      // This message will not be printed because event dequeuing does not run the job.
-      // This is fine as we are just using it to stop running.
-      increaseBlockInvalidCounter();
-      await saveInvalidBlock({
-        invalidCode: err.code,
-        invalidMessage: err.message,
-        ...block,
-      });
-      const txDataToSign = await createChallenge(block, transactions, err);
-      // push the challenge into the stop queue.  This will stop blocks being
-      // made until the challenge has run and a rollback has happened.  We could
-      // push anything into the queue and that would work but it's useful to
-      // have the actual challenge to support syncing
-      logger.debug('enqueuing event to stop queue');
-      await enqueueEvent(commitToChallenge, 2, txDataToSign);
-      await commitToChallenge(txDataToSign);
-    } else {
-      logger.error(err.stack);
-      throw new Error(err);
-    }
-  }
-}
-
 /**
 This handler runs whenever a BlockProposed event is emitted by the blockchain
 */
-export async function blockProposedEventHandler(data) {
+async function blockProposedEventHandler(data) {
   const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
   const { block, transactions } = await getProposeBlockCalldata(data);
   const nextBlockNumberL2 = await getNumberOfL2Blocks();
@@ -230,3 +181,5 @@ export async function blockProposedEventHandler(data) {
     }
   }
 }
+
+export default blockProposedEventHandler;

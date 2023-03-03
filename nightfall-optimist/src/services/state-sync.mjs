@@ -13,7 +13,7 @@ import {
   flushQueue,
 } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
-import { blockProposedEventHandler } from '../event-handlers/block-proposed.mjs';
+import blockProposedEventHandler from '../event-handlers/block-proposed.mjs';
 import {
   transactionSubmittedEventHandler,
   workerEnableSet,

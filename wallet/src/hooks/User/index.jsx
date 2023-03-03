@@ -2,7 +2,7 @@ import React from 'react';
 import { useHistory } from 'react-router-dom';
 
 import { ZkpKeys } from '@Nightfall/services/keys';
-import {blockProposedEventHandler} from '@Nightfall/event-handlers/block-proposed';
+import blockProposedEventHandler from '@Nightfall/event-handlers/block-proposed';
 import {
   checkIndexDBForCircuit,
   checkIndexDBForCircuitHash,
