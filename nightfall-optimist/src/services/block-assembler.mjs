@@ -6,7 +6,6 @@
  */
 import WebSocket from 'ws';
 import config from 'config';
-import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { waitForTimeout } from '@polygon-nightfall/common-files/utils/utils.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
@@ -23,7 +22,6 @@ import {
 const { MAX_BLOCK_SIZE, MINIMUM_TRANSACTION_SLOTS, PROPOSER_MAX_BLOCK_PERIOD_MILIS } = config;
 const { STATE_CONTRACT_NAME } = constants;
 
-const { blockAssemblyWorkerUrl, blockAssemblyWorkerCount } = config.BLOCK_ASSEMBLY_WORKER_PARAMS;
 let ws;
 let makeNow = false;
 let lastBlockTimestamp = new Date().getTime();
@@ -231,38 +229,4 @@ export async function conditionalMakeBlock(proposer) {
   }
   // Let's slow down here so we don't slam the database.
   await waitForTimeout(3000);
-}
-
-export async function requestMakeBlock(proposer) {
-  // If Block Assembly WORKERS enabled or not responsive, route transaction requests to main thread
-  console.log('BLOCK ASSEMBLY CALL', blockAssemblyWorkerCount, blockAssemblyWorkerUrl, proposer);
-  if (Number(blockAssemblyWorkerCount)) {
-    axios
-      .get(`${blockAssemblyWorkerUrl}/block-assembly`, {
-        params: {
-          proposer,
-        },
-      })
-      .catch(async function (error) {
-        logger.error(`Error submit block assembly worker ${error}`);
-        await conditionalMakeBlock(proposer);
-      });
-  } else {
-    // Main thread (no workers)
-    await conditionalMakeBlock(proposer);
-  }
-}
-
-export async function requestSignalRollbackCompleted() {
-  // If Block Assembly WORKERS enabled or not responsive, route transaction requests to main thread
-  console.log('REQUST SIGNAL ROLLBACK');
-  if (Number(blockAssemblyWorkerCount)) {
-    axios.get(`${blockAssemblyWorkerUrl}/rollback-completed`).catch(async function (error) {
-      logger.error(`Error submit signal rollbacl to proposer worker ${error}`);
-      await signalRollbackCompleted();
-    });
-  } else {
-    // Main thread (no workers)
-    await signalRollbackCompleted();
-  }
 }

@@ -68,14 +68,7 @@ module.exports = {
   MAX_QUEUE: 10,
   TX_WORKER_PARAMS: {
     txWorkerCount: process.env.TX_WORKER_COUNT || 100,
-    txWorkerUrl: process.env.TX_WORKER_URL || 'http://172.17.0.1:3000',
-  },
-  BLOCK_PROPOSED_WORKER_PARAMS: {
-    blockProposedWorkerUrl: process.env.BLOCK_PROPOSED_WORKER_URL || 'http://172.17.0.1:4000',
-  },
-  BLOCK_ASSEMBLY_WORKER_PARAMS: {
-    blockAssemblyWorkerCount: process.env.BLOCK_ASSEMBLY_WORKER_COUNT || 1,
-    blockAssemblyWorkerUrl: process.env.BLOCK_ASSEMBLY_WORKER_URL || 'http://172.17.0.1:5000',
+    txWorkerUrl: process.env.TX_WORKER_URL || 'http:opt-txw',
   },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,

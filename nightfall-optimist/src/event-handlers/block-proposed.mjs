@@ -1,7 +1,6 @@
 /* eslint-disable import/no-cycle */
 import WebSocket from 'ws';
 import config from 'config';
-import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import Timber from '@polygon-nightfall/common-files/classes/timber.mjs';
 import { getTimeByBlock } from '@polygon-nightfall/common-files/utils/block-utils.mjs';
@@ -28,7 +27,6 @@ import Proposer from '../classes/proposer.mjs';
 
 const { TIMBER_HEIGHT, HASH_TYPE } = config;
 const { ZERO } = constants;
-const { blockProposedWorkerUrl } = config.BLOCK_PROPOSED_WORKER_PARAMS;
 
 let ws;
 // Stores latest L1 block correctly synchronized to speed possible resyncs
@@ -86,21 +84,6 @@ export async function blockProposed(blockNumberL2) {
       throw new Error(err);
     }
   }
-}
-
-async function dispatchBlockProposed(blockNumberL2) {
-  // Dispatch event to workers
-  //  else, or if not responsive, event is processed by main thread
-  axios
-    .get(`${blockProposedWorkerUrl}/block-proposed`, {
-      params: {
-        blockNumberL2,
-      },
-    })
-    .catch(async function (error) {
-      logger.error(`Error block proposed tx worker ${error}`);
-      await blockProposed(blockNumberL2);
-    });
 }
 
 /**
@@ -246,6 +229,4 @@ export async function blockProposedEventHandler(data) {
       throw new Error(err);
     }
   }
-
-  // await dispatchBlockProposed(block.blockNumberL2);
 }
