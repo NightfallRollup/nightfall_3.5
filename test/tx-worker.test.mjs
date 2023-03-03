@@ -29,7 +29,7 @@ const {
   signingKeys,
 } = config.TEST_OPTIONS;
 
-const initTx = 4;
+const initTx = 32;
 const nf3Users = [new Nf3(signingKeys.user1, environment), new Nf3(signingKeys.user2, environment)];
 const nf3Proposer1 = new Nf3(signingKeys.proposer1, environment);
 const transferValue = 1;
@@ -42,6 +42,7 @@ let stateAddress;
 const eventLogs = [];
 let txPerSecondWorkersOn;
 
+// Generated deposits and transfers
 const generateNTransactions = async () => {
   // disable worker processing and store transactions in tmp collection
   await axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, {
@@ -155,6 +156,7 @@ describe('Tx worker test', () => {
      * speed up the process
      */
     it('Initialize tx worker', async function () {
+      const _initTx=16
       // enable workers
       await axios.post(`${environment.optimistApiUrl}/debug/tx-worker-enable`, {
         enable: true,
@@ -166,7 +168,7 @@ describe('Tx worker test', () => {
       // We create enough transactions to initialize tx workers
       await depositNTransactions(
         nf3Users[0],
-        initTx,
+        _initTx,
         erc20Address,
         tokenType,
         depositValue,
@@ -176,7 +178,7 @@ describe('Tx worker test', () => {
 
       let nTx = 0;
       // Wait until all transactions are generated
-      while (nTx < initTx) {
+      while (nTx < _initTx) {
         nTx = await numberOfBufferedTransactions();
         console.log('N buffered transactions', nTx);
         await waitForTimeout(1000);
