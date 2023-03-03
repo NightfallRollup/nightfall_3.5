@@ -66,6 +66,7 @@ async function makeBlock(proposer, transactions) {
   return Block.build({ proposer, transactions });
 }
 
+// Wrapper function that controls how block is sent to Proposer so that it signs it
 async function sendBlockToProposer(unsignedProposeBlockTransaction, block, transactions) {
   let count = 0;
   while (!ws || ws.readyState !== WebSocket.OPEN) {

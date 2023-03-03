@@ -39,7 +39,6 @@ async function checkDuplicateCommitment({
   // Note: There is no need to check the duplicate commitment in the same transaction since this is already checked in the circuit
   // check if any commitment in the transaction is already part of an L2 block
 
-  const timeStart = new Date().getTime();
   // Check if any transaction has a duplicated commitment
   const nonZeroCommitments = transaction.commitments.filter(c => c !== ZERO);
   const nonZeroCommitmentsFilteredTransactions = await getTransactionByCommitment(
@@ -97,12 +96,6 @@ async function checkDuplicateCommitment({
       }
     }
   }
-
-  console.log(
-    'checkDupliocateCommitment Time RRRRR',
-    new Date().getTime() - timeStart,
-    process.pid,
-  );
   return nonZeroCommitments;
 }
 
@@ -113,7 +106,6 @@ async function checkDuplicateNullifier({
   checkDuplicatesInMempool,
   transactionBlockNumberL2,
 }) {
-  const startTime = new Date().getTime();
   // Note: There is no need to check the duplicate nullifiers in the same transaction since this is already checked in the circuit
   // check if any nullifier in the transction is already part of an L2 block
   const nonZeroNullifiers = transaction.nullifiers.filter(n => n !== ZERO);
@@ -170,12 +162,10 @@ async function checkDuplicateNullifier({
       }
     }
   }
-  console.log('checkDupliocateNullifier Time RRRRR', new Date().getTime() - startTime, process.pid);
   return nonZeroNullifiers;
 }
 
 async function checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2) {
-  const startTime = new Date().getTime();
   let latestBlockNumberL2;
   if (lastValidBlockNumberL2) {
     latestBlockNumberL2 = lastValidBlockNumberL2;
@@ -207,11 +197,9 @@ async function checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2)
       );
     }
   });
-  console.log('checkRoot Time RRRRR', new Date().getTime() - startTime, process.pid);
 }
 
 async function verifyProof(transaction, stateConractInstance, shieldContractInstance) {
-  const startTime = new Date().getTime();
   const vkArrayCached = CACHE_VERIFICATION_KEY.get(transaction.circuitHash);
   const vkArray =
     vkArrayCached ??
@@ -270,21 +258,12 @@ async function verifyProof(transaction, stateConractInstance, shieldContractInst
     const uncompressedProof = decompressProof(transaction.proof);
     const proof = new Proof(uncompressedProof, CURVE, PROVING_SCHEME, inputs);
 
-    const startTimeVerify = new Date().getTime();
+    // Using our own version of Snarkjs verifier. This version optimizes
+    //  verification for multi circuits. Snarkjs verifier loads circuits, and
+    //  performs expensive initialization at every call. This version caches
+    //  all required information so that its only done once.
     const verifies = await groth16Verify(vk, inputs, proof, transaction.circuitHash);
 
-    console.log(
-      'verifyProof get verify RRRRRR',
-      new Date().getTime() - startTimeVerify,
-      process.pid,
-      verifies,
-    );
-
-    console.log(
-      'verifyProof get verify Total RRRRRR',
-      new Date().getTime() - startTime,
-      process.pid,
-    );
     if (!verifies) throw new TransactionError('The proof did not verify', 2);
   } catch (e) {
     if (e instanceof TransactionError) {
@@ -304,19 +283,12 @@ export async function checkTransaction({
   transactionBlockNumberL2,
   lastValidBlockNumberL2,
 }) {
-  const startTimeReadContract = new Date().getTime();
   const [stateConractInstance, shieldContractInstance] = await Promise.all([
     waitForContract(STATE_CONTRACT_NAME),
     waitForContract(SHIELD_CONTRACT_NAME),
   ]);
 
   logger.info({ msg: 'Check Transaction', transaction });
-  console.log(
-    'Check Transaction contract time RRRRRR',
-    new Date().getTime() - startTimeReadContract,
-    process.pid,
-  );
-  const startTimeDups = new Date().getTime();
   const [nonZeroCommitments, nonZeroNullifiers] = await Promise.all([
     checkDuplicateCommitment({
       transaction,
@@ -333,8 +305,6 @@ export async function checkTransaction({
     checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2, stateConractInstance),
     verifyProof(transaction, stateConractInstance, shieldContractInstance),
   ]);
-
-  console.log('Check Transaction Dups RRRRRR', new Date().getTime() - startTimeDups, process.pid);
 
   return [nonZeroCommitments, nonZeroNullifiers];
 }

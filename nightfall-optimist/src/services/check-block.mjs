@@ -20,9 +20,10 @@ import Block from '../classes/block.mjs';
 import { increaseBlockInvalidCounter } from './debug-counters.mjs';
 import { createChallenge, commitToChallenge } from './challenges.mjs';
 import { checkTransaction } from './transaction-checker.mjs';
+import { workerEnableGet } from '../event-handlers/transaction-submitted.mjs';
 
 const { ZERO } = constants;
-const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
+const { txWorkerUrl } = config.TX_WORKER_PARAMS;
 
 /**
  * Check that the leafCount is correct
@@ -244,7 +245,6 @@ async function checkDuplicateNullifiersWithinBlock(block, transactions) {
 
 async function buildErrorMessage(err, block, transactions, transaction) {
   const newError = { ...err };
-  console.log('BUILD NEW ERROR', err, newError);
   if (newError.code === 0 || newError.code === 1) {
     let siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
       .transactionHashSiblingPath;
@@ -278,13 +278,10 @@ async function buildErrorMessage(err, block, transactions, transaction) {
       siblingPath1,
     };
   }
-  console.log('BUILD NEW ERROR END', newError);
   return newError;
 }
 
-// check transaction to tx worker
 async function createAndCommitChallenge(newError, transaction, block) {
-  console.log('RECEIVED ERROR WARNING', newError, block, transaction);
   const err = new BlockError(
     `The transaction check failed with error: ${newError.message}`,
     Number(newError.code) + 2, // mapping transaction error to block error
@@ -293,7 +290,6 @@ async function createAndCommitChallenge(newError, transaction, block) {
       transactionHashIndex: block.transactionHashes.indexOf(transaction.transactionHash),
     },
   );
-  console.log('BLOCK ERROR', err);
   logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
   logger.info(`Block is invalid, stopping any block production`);
   // We enqueue an event onto the stopQueue to halt block production.
@@ -318,6 +314,71 @@ async function createAndCommitChallenge(newError, transaction, block) {
   await commitToChallenge(txDataToSign);
 }
 
+// Dispatch transactions to optimist for checking
+async function dispatchTransactionsToOptimist(block, transactions) {
+  // If exception is caught it means that transaction workers are not available. Lets verify
+  //    transactions with optimist
+  let transaction;
+  let error = null;
+  let incorrectTransaction = null;
+  try {
+    for (transaction of transactions) {
+      // eslint-disable-next-line no-await-in-loop
+      await checkTransaction({
+        transaction,
+        checkDuplicatesInL2: true,
+        checkDuplicatesInMempool: true,
+        transactionBlockNumberL2: block.blockNumberL2,
+      });
+    }
+  } catch (err) {
+    // Transaction check failed!!! Launch challenge
+    error = err;
+    incorrectTransaction = transaction;
+  }
+  return { error, incorrectTransaction };
+}
+
+// Check if the transactions are valid - transaction type, public input hash and proof
+//   verification are all checked
+//  If workers are enabled (not syncing), then dispatch to workers if available.
+//   else,  optimist will do the checking
+async function dispatchTransactions(block, transactions) {
+  let error = null;
+  let incorrectTransaction = null;
+  if (workerEnableGet()) {
+    try {
+      const transactionStatus = (
+        await Promise.all(
+          transactions.map(transaction =>
+            axios.post(`${txWorkerUrl}/check-transaction`, {
+              transaction,
+              checkDuplicatesInL2: true,
+              checkDuplicatesInMempool: true,
+              transactionBlockNumberL2: block.blockNumberL2,
+            }),
+          ),
+        )
+      ).map((status, transactionIndex) => {
+        return { status: status.data.err, transactionIndex };
+      });
+      const transactionError = transactionStatus.filter(tx => typeof tx.status !== 'undefined');
+      if (transactionError.length) {
+        const { status, transactionIndex } = transactionError[0];
+        error = status;
+        incorrectTransaction = transactions[transactionIndex];
+      }
+    } catch (err) {
+      // If exception is caught it means that transaction workers are not available. Lets verify
+      //    transactions with optimist
+      ({ error, incorrectTransaction } = await dispatchTransactionsToOptimist(block, transactions));
+    }
+  } else {
+    ({ error, incorrectTransaction } = await dispatchTransactionsToOptimist(block, transactions));
+  }
+  return { error, incorrectTransaction };
+}
+
 /**
  * Checks the block's properties.  It will return the first inconsistency it finds
  * @param {object} block - the block being checked
@@ -339,54 +400,7 @@ export async function checkBlock(block, transactions) {
     return;
   }
 
-  let error = null;
-  let incorrectTransaction = null;
-
-  // check if the transactions are valid - transaction type, public input hash and proof
-  //   verification are all checked
-  // First attmpt to check transactions using transaction workers. If not available,
-  //   optimist will do the checking
-  try {
-    const transactionStatus = (
-      await Promise.all(
-        transactions.map(transaction =>
-          axios.post(`${txWorkerUrl}/check-transaction`, {
-            transaction,
-            checkDuplicatesInL2: true,
-            checkDuplicatesInMempool: true,
-            transactionBlockNumberL2: block.blockNumberL2,
-          }),
-        ),
-      )
-    ).map((status, transactionIndex) => {
-      return { status: status.data.err, transactionIndex };
-    });
-    const transactionError = transactionStatus.filter(tx => typeof tx.status !== 'undefined');
-    if (transactionError.length) {
-      const { status, transactionIndex } = transactionError[0];
-      error = status;
-      incorrectTransaction = transactions[transactionIndex];
-    }
-  } catch (err) {
-    // If exception is caught it means that transaction workers are not available. Lets verify 
-    //    transactions with optimist
-    let transaction;
-    try {
-      for (transaction of transactions) {
-        // eslint-disable-next-line no-await-in-loop
-        await checkTransaction({
-          transaction,
-          checkDuplicatesInL2: true,
-          checkDuplicatesInMempool: true,
-          transactionBlockNumberL2: block.blockNumberL2,
-        });
-      }
-    } catch (err2) {
-      // Transaction check failed!!! Launch challenge
-      error = err2;
-      incorrectTransaction = transaction;
-    }
-  }
+  const { error, incorrectTransaction } = await dispatchTransactions(block, transactions);
 
   if (error !== null) {
     const newError = await buildErrorMessage(error, block, transactions, incorrectTransaction);

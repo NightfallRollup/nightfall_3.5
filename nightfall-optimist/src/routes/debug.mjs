@@ -11,7 +11,7 @@ import {
 import { getDebugCounters } from '../services/debug-counters.mjs';
 import { findAndDeleteAllBufferedTransactions } from '../services/database.mjs';
 
-const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
+const { txWorkerUrl } = config.TX_WORKER_PARAMS;
 const router = express.Router();
 
 router.get('/counters', async (req, res, next) => {
@@ -43,23 +43,14 @@ router.post('/tx-submitted-enable', async (req, res) => {
   if (enable) {
     submitTransactionEnable(true);
     const transactions = (await findAndDeleteAllBufferedTransactions()) ?? [];
-    console.log('Transactions XXXXXXXXXXXX', transactions);
 
-    if (Number(txWorkerCount) && workerEnableGet()) {
+    if (workerEnableGet()) {
       transactions.forEach(async tx =>
         axios
           .post(`${txWorkerUrl}/tx-submitted`, {
             tx,
             enable: true,
           })
-          /*
-          .get(`${txWorkerUrl}/tx-submitted`, {
-            params: {
-              tx,
-              enable: true,
-            },
-          })
-          */
           .catch(function (error) {
             if (error.request) {
               submitTransaction(tx, true);

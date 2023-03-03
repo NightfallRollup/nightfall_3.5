@@ -17,11 +17,21 @@ import { getTransactionSubmittedCalldata } from '../services/process-calldata.mj
 
 const { STATE_CONTRACT_NAME } = constants;
 
-const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
+const { txWorkerUrl } = config.TX_WORKER_PARAMS;
 
 // Flag to enable/disable submitTransaction processing -> Debug
+//  If disabled, transactiosn are stored in a temporary collection. When enabled
+//  transactions from temporary collection are written on transactions collection.
+//  This emulates the optimist receiving many transactions simultaneously
 let _submitTransactionEnable = true;
-// Flag to enable/disable worker processing -> Debug
+
+export function submitTransactionEnable(enable) {
+  _submitTransactionEnable = enable;
+}
+
+// Flag to enable/disable worker processing
+//  When disabled, workers are stopped. Workers are
+//   stopped during initial syncing
 let _workerEnable = true;
 
 export function workerEnableSet(flag) {
@@ -31,13 +41,8 @@ export function workerEnableGet() {
   return _workerEnable;
 }
 
-export function submitTransactionEnable(enable) {
-  _submitTransactionEnable = enable;
-}
-
 /**
- * Transaction Event Handler processing. It can be processed by main thread
- * or by worker thread
+ * Transaction Event Handler processing.
  *
  * @param {Object} _transaction Transaction data
  * @param {bolean} txEnable Flag indicating if transactions should be processed immediatelly (true)
@@ -96,22 +101,15 @@ export async function submitTransaction(transaction, txEnable) {
   }
 }
 
+// Dispatches transaction to Tx Workers if available or to self if workers not available
 async function dispatchTransactionSubmittedEvent(transaction) {
   // If TX WORKERS enabled or not responsive, route transaction requests to main thread
-  if (Number(txWorkerCount) && _workerEnable) {
+  if (_workerEnable) {
     axios
       .post(`${txWorkerUrl}/tx-submitted`, {
         tx: transaction,
         enable: _submitTransactionEnable === true,
       })
-      /*
-      .get(`${txWorkerUrl}/tx-submitted`, {
-        params: {
-          tx: transaction,
-          enable: _submitTransactionEnable === true,
-        },
-      })
-      */
       .catch(function (error) {
         logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
         submitTransaction(transaction, _submitTransactionEnable);
@@ -148,7 +146,6 @@ export async function transactionSubmittedEventHandler(eventParams) {
   logger.info({
     msg: 'Transaction Handler - New transaction received.',
     transaction,
-    txWorkerCount,
     _workerEnable,
   });
 
