@@ -154,7 +154,7 @@ services:
       PROPOSER_MAX_BLOCK_PERIOD_MILIS: ${PROPOSER_MAX_BLOCK_PERIOD_MILIS:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw:3000}
+      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw}
     command: ['npm', 'run', 'dev']
 
   opt-txw:
@@ -167,7 +167,7 @@ services:
     networks:
       - nightfall_network
     ports:
-      - 3000:3000
+      - 3000:80
     volumes:
       - type: volume
         source: build

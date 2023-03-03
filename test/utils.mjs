@@ -397,8 +397,6 @@ export const transferNTransactions = async (
       compressedZkpPublicKey,
       fee,
     );
-    const balance = await nf3.getLayer2Balances();
-    console.log('L2 BALANCE', balance);
     if (!offchain) {
       expectTransaction(res);
       transferTransactions.push(res);

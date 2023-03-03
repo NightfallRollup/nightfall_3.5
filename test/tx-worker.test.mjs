@@ -29,7 +29,7 @@ const {
   signingKeys,
 } = config.TEST_OPTIONS;
 
-const initTx = 64;
+const initTx = 4;
 const nf3Users = [new Nf3(signingKeys.user1, environment), new Nf3(signingKeys.user2, environment)];
 const nf3Proposer1 = new Nf3(signingKeys.proposer1, environment);
 const transferValue = 1;
@@ -63,7 +63,7 @@ const generateNTransactions = async () => {
   const balance = await nf3Users[0].getLayer2Balances();
   const submittedTransfers = Math.min(
     Math.ceil(initTx / 2),
-    Math.floor(balance[erc20Address].balance / depositValue),
+    Math.floor(balance[erc20Address][0].balance / depositValue),
   );
   console.log(`Requesting ${submittedTransfers} transfers`);
   await transferNTransactions(
@@ -81,11 +81,13 @@ const generateNTransactions = async () => {
   let nTx = 0;
   let nTx1 = 0;
   let nTotalTx = Math.ceil(initTx / 2) + submittedTransfers;
+  let retries = 0;
   // Wait until all transactions are generated
-  while (nTx < nTotalTx) {
+  while (nTx < nTotalTx && retries < 10) {
     nTx = await numberOfBufferedTransactions();
     console.log(`N buffered transactions ${nTx}/${nTotalTx}`);
     await waitForTimeout(1000);
+    retries++;
   }
 
   nTotalTx = (await numberOfBufferedTransactions()) + (await numberOfMempoolTransactions());
@@ -96,8 +98,8 @@ const generateNTransactions = async () => {
   const startTimeTx = new Date().getTime();
   // while unprocessed transactions (nTx) is less than number of transactions generated (initTx),
   // and number of transactions increases (first block is generated)
-  let retries = 0;
-  while (nTx >= nTx1 && nTx < nTotalTx && retries < 100) {
+  retries = 0;
+  while (nTx >= nTx1 && nTx < nTotalTx && retries < 30) {
     nTx1 = nTx;
     nTx = await numberOfMempoolTransactions();
     console.log(`N Unprocessed transactions ${nTx}/${nTotalTx}`);
@@ -132,7 +134,7 @@ describe('Tx worker test', () => {
       process.exit();
     }
 
-    await nf3Proposer1.registerProposer('http://optimist', minStake);
+    await nf3Proposer1.registerProposer('http://opt-txw', minStake);
     await nf3Proposer1.startProposer();
 
     // Proposer listening for incoming events
@@ -183,8 +185,15 @@ describe('Tx worker test', () => {
       // enable worker processing and process transactions in tmp
       axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, { enable: true });
       // leave some time for transaction processing
-      await waitForTimeout(10000);
-      await makeBlock();
+      await waitForTimeout(1000);
+      let pendingTx = 1;
+      // In this second part, measure time it takes to generate blocks
+      while (pendingTx) {
+        console.log('Pending transactions:', pendingTx);
+        await makeBlock();
+        pendingTx = await numberOfMempoolTransactions();
+      }
+      console.log('Pending transactions:', pendingTx);
     });
 
     /**
@@ -193,7 +202,7 @@ describe('Tx worker test', () => {
      */
 
     it('Generate transactions and measure transaction processing and block assembly time with workers on', async function () {
-      let pendingBlocks = 1;
+      let pendingTx = 1;
       const blockTimestamp = [];
       let startTime;
       // enable workers
@@ -202,16 +211,14 @@ describe('Tx worker test', () => {
       });
       txPerSecondWorkersOn = await generateNTransactions();
       console.log('Transactions per second', txPerSecondWorkersOn);
-      makeBlock();
 
       // In this second part, measure time it takes to generate blocks
-      while (pendingBlocks) {
-        console.log('Pending L2 blocks', pendingBlocks);
+      while (pendingTx) {
+        console.log('Pending transactions:', pendingTx);
         startTime = new Date().getTime();
-        await web3Client.waitForEvent(eventLogs, ['blockProposed']);
+        await makeBlock();
         blockTimestamp.push(new Date().getTime() - startTime);
-        pendingBlocks -= 1;
-        makeBlock();
+        pendingTx = await numberOfMempoolTransactions();
       }
       console.log('Block times', blockTimestamp);
     });
@@ -221,7 +228,7 @@ describe('Tx worker test', () => {
      * process them all at once without workers.
      */
     it('Generate transactions and measure transaction processing and block assembly time with workers off', async function () {
-      let pendingBlocks = 1;
+      let pendingTx = 1;
       const blockTimestamp = [];
       let startTime;
       // disable workers
@@ -232,16 +239,14 @@ describe('Tx worker test', () => {
       console.log('Transactions per second', txPerSecond);
       // check that we can process more than 50 transactions per second. In reality, it should be more.
       expect(txPerSecondWorkersOn).to.be.greaterThan(txPerSecond);
-      makeBlock();
 
       // In this second part, measure time it takes to generate blocks
-      while (pendingBlocks) {
-        console.log('Pending L2 blocks', pendingBlocks);
+      while (pendingTx) {
+        console.log('Pending transactions:', pendingTx);
         startTime = new Date().getTime();
-        await web3Client.waitForEvent(eventLogs, ['blockProposed']);
+        await makeBlock();
         blockTimestamp.push(new Date().getTime() - startTime);
-        pendingBlocks -= 1;
-        makeBlock();
+        pendingTx = await numberOfMempoolTransactions();
       }
       console.log('Block times', blockTimestamp);
     });

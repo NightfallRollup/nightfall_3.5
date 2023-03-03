@@ -1,19 +1,28 @@
 /**
 Module to check that submitted Blocks and Transactions are valid
 */
+import axios from 'axios';
+import config from 'config';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
+import { enqueueEvent } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
 import { BlockError, Transaction } from '../classes/index.mjs';
 import {
   getBlockByBlockNumberL2,
   getTransactionHashSiblingInfo,
   getTreeByBlockNumberL2,
   getTreeByLeafCount,
+  getAllRegisteredProposers,
+  saveInvalidBlock,
+  getTransactionByBlockNumberL2,
 } from './database.mjs';
-import { checkTransaction } from './transaction-checker.mjs';
 import Block from '../classes/block.mjs';
+import { increaseBlockInvalidCounter } from './debug-counters.mjs';
+import { createChallenge, commitToChallenge } from './challenges.mjs';
+import { checkTransaction } from './transaction-checker.mjs';
 
 const { ZERO } = constants;
+const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
 
 /**
  * Check that the leafCount is correct
@@ -233,6 +242,82 @@ async function checkDuplicateNullifiersWithinBlock(block, transactions) {
   }
 }
 
+async function buildErrorMessage(err, block, transactions, transaction) {
+  const newError = { ...err };
+  console.log('BUILD NEW ERROR', err, newError);
+  if (newError.code === 0 || newError.code === 1) {
+    let siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
+      .transactionHashSiblingPath;
+    // case when block.build never was called
+    // may be this optimist never ran as proposer
+    // or more likely since this tx is bad tx from a bad proposer.
+    // prposer hosted in this optimist never build any block with this bad tx in it
+    if (!siblingPath1) {
+      await Block.calcTransactionHashesRoot(transactions);
+      siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
+        .transactionHashSiblingPath;
+    }
+    // case when block.build never was called
+    // may be this optimist never ran as proposer
+    if (!newError.metadata.siblingPath2) {
+      await Block.calcTransactionHashesRoot(
+        newError.metadata.block2.transactionHashes.map(transactionHash => {
+          return { transactionHash };
+        }),
+      );
+      newError.metadata.siblingPath2 = (
+        await getTransactionHashSiblingInfo(newError.metadata.transaction2.transactionHash)
+      ).transactionHashSiblingPath;
+    }
+
+    newError.metadata = {
+      ...newError.metadata,
+      block1: block,
+      transaction1: transaction,
+      transaction1Index: block.transactionHashes.indexOf(transaction.transactionHash),
+      siblingPath1,
+    };
+  }
+  console.log('BUILD NEW ERROR END', newError);
+  return newError;
+}
+
+// check transaction to tx worker
+async function createAndCommitChallenge(newError, transaction, block) {
+  console.log('RECEIVED ERROR WARNING', newError, block, transaction);
+  const err = new BlockError(
+    `The transaction check failed with error: ${newError.message}`,
+    Number(newError.code) + 2, // mapping transaction error to block error
+    {
+      ...newError.metadata,
+      transactionHashIndex: block.transactionHashes.indexOf(transaction.transactionHash),
+    },
+  );
+  console.log('BLOCK ERROR', err);
+  logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
+  logger.info(`Block is invalid, stopping any block production`);
+  // We enqueue an event onto the stopQueue to halt block production.
+  // This message will not be printed because event dequeuing does not run the job.
+  // This is fine as we are just using it to stop running.
+  increaseBlockInvalidCounter();
+  await saveInvalidBlock({
+    invalidCode: err.code,
+    invalidMessage: err.message,
+    ...block,
+  });
+
+  const transactions = await getTransactionByBlockNumberL2(block.blockNumberL2);
+
+  const txDataToSign = await createChallenge(block, transactions, err);
+  // push the challenge into the stop queue.  This will stop blocks being
+  // made until the challenge has run and a rollback has happened.  We could
+  // push anything into the queue and that would work but it's useful to
+  // have the actual challenge to support syncing
+  logger.debug('enqueuing event to stop queue');
+  await enqueueEvent(commitToChallenge, 2, txDataToSign);
+  await commitToChallenge(txDataToSign);
+}
+
 /**
  * Checks the block's properties.  It will return the first inconsistency it finds
  * @param {object} block - the block being checked
@@ -248,61 +333,63 @@ export async function checkBlock(block, transactions) {
     checkDuplicateNullifiersWithinBlock(block, transactions),
   ]);
 
-  // check if the transactions are valid - transaction type, public input hash and proof verification are all checked
+  // Check if my proposer build the received block. If so, we can skip transaction processing
+  const proposers = (await getAllRegisteredProposers()).map(p => p._id.toLowerCase());
+  if (proposers.includes(block.proposer)) {
+    return;
+  }
 
-  let transaction;
+  let error = null;
+  let incorrectTransaction = null;
+
+  // check if the transactions are valid - transaction type, public input hash and proof
+  //   verification are all checked
+  // First attmpt to check transactions using transaction workers. If not available,
+  //   optimist will do the checking
   try {
-    for (let i = 0; i < transactions.length; i++) {
-      transaction = transactions[i];
-      // eslint-disable-next-line no-await-in-loop
-      await checkTransaction({
-        transaction,
-        checkDuplicatesInL2: true,
-        checkDuplicatesInMempool: true,
-        transactionBlockNumberL2: block.blockNumberL2,
-      }); // eslint-disable-line no-await-in-loop
+    const transactionStatus = (
+      await Promise.all(
+        transactions.map(transaction =>
+          axios.post(`${txWorkerUrl}/check-transaction`, {
+            transaction,
+            checkDuplicatesInL2: true,
+            checkDuplicatesInMempool: true,
+            transactionBlockNumberL2: block.blockNumberL2,
+          }),
+        ),
+      )
+    ).map((status, transactionIndex) => {
+      return { status: status.data.err, transactionIndex };
+    });
+    const transactionError = transactionStatus.filter(tx => typeof tx.status !== 'undefined');
+    if (transactionError.length) {
+      const { status, transactionIndex } = transactionError[0];
+      error = status;
+      incorrectTransaction = transactions[transactionIndex];
     }
   } catch (err) {
-    if (err.code === 0 || err.code === 1) {
-      let siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
-        .transactionHashSiblingPath;
-      // case when block.build never was called
-      // may be this optimist never ran as proposer
-      // or more likely since this tx is bad tx from a bad proposer.
-      // prposer hosted in this optimist never build any block with this bad tx in it
-      if (!siblingPath1) {
-        await Block.calcTransactionHashesRoot(transactions);
-        siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
-          .transactionHashSiblingPath;
+    // If exception is caught it means that transaction workers are not available. Lets verify 
+    //    transactions with optimist
+    let transaction;
+    try {
+      for (transaction of transactions) {
+        // eslint-disable-next-line no-await-in-loop
+        await checkTransaction({
+          transaction,
+          checkDuplicatesInL2: true,
+          checkDuplicatesInMempool: true,
+          transactionBlockNumberL2: block.blockNumberL2,
+        });
       }
-      // case when block.build never was called
-      // may be this optimist never ran as proposer
-      if (!err.metadata.siblingPath2) {
-        await Block.calcTransactionHashesRoot(
-          err.metadata.block2.transactionHashes.map(transactionHash => {
-            return { transactionHash };
-          }),
-        );
-        err.metadata.siblingPath2 = (
-          await getTransactionHashSiblingInfo(err.metadata.transaction2.transactionHash)
-        ).transactionHashSiblingPath;
-      }
-
-      err.metadata = {
-        ...err.metadata,
-        block1: block,
-        transaction1: transaction,
-        transaction1Index: block.transactionHashes.indexOf(transaction.transactionHash),
-        siblingPath1,
-      };
+    } catch (err2) {
+      // Transaction check failed!!! Launch challenge
+      error = err2;
+      incorrectTransaction = transaction;
     }
-    throw new BlockError(
-      `The transaction check failed with error: ${err.message}`,
-      err.code + 2, // mapping transaction error to block error
-      {
-        ...err.metadata,
-        transactionHashIndex: block.transactionHashes.indexOf(transaction.transactionHash),
-      },
-    );
+  }
+
+  if (error !== null) {
+    const newError = await buildErrorMessage(error, block, transactions, incorrectTransaction);
+    createAndCommitChallenge(newError, incorrectTransaction, block);
   }
 }

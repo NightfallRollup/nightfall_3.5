@@ -213,6 +213,7 @@ module.exports = {
       chainId: 1,
       clientApiUrl: '',
       optimistApiUrl: '',
+      optimistTxworkerApiUrl: '',
       optimistWsUrl: '',
       web3WsUrl: '',
     },
@@ -223,6 +224,9 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistTxWorkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST
@@ -246,6 +250,9 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistTxworkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST
@@ -281,6 +288,7 @@ module.exports = {
       chainId: 1337,
       clientApiUrl: `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`,
       optimistApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
+      optimistTxWorkerApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
       optimistWsUrl: `wss://${process.env.OPTIMIST_HOST}`,
       proposerBaseUrl: `https://${process.env.PROPOSER_HOST}`,
       web3WsUrl: `wss://${process.env.BLOCKCHAIN_WS_HOST}${process.env.BLOCKCHAIN_PATH}`,
@@ -298,6 +306,9 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistTxWorkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST

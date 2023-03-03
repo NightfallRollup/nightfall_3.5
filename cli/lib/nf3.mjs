@@ -55,6 +55,7 @@ const liquidityProviderQueue = createQueue({ autostart: true, concurrency: 1 });
 Creates a new Nightfall_3 library instance.
 @param {string} clientBaseUrl - The base url for nightfall-client
 @param {string} optimistBaseUrl - The base url for nightfall-optimist
+@param {string} optimistTxWorkerBaseUrl - The base url for nightfall-optimist Tx worker
 @param {string} optimistWsUrl - The webscocket url for nightfall-optimist
 @param {string} web3WsUrl - The websocket url for the web3js client
 @param {string} ethereumSigningKey - the Ethereum siging key to be used for transactions (hex string).
@@ -64,6 +65,8 @@ class Nf3 {
   clientBaseUrl;
 
   optimistBaseUrl;
+
+  optimistTxWorkerBaseUrl;
 
   optimistWsUrl;
 
@@ -130,6 +133,7 @@ class Nf3 {
   ) {
     this.clientBaseUrl = environment.clientApiUrl;
     this.optimistBaseUrl = environment.optimistApiUrl;
+    this.optimistTxWorkerBaseUrl = environment.optimistTxWorkerApiUrl;
     this.optimistWsUrl = environment.optimistWsUrl;
     this.web3WsUrl = environment.web3WsUrl;
     this.ethereumSigningKey = ethereumSigningKey;

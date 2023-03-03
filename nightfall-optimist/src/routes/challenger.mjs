@@ -2,9 +2,21 @@
 Routes for setting and removing valid challenger addresses.
 */
 import express from 'express';
-import { flushQueue, queues } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
+import {
+  flushQueue,
+  queues,
+  enqueueEvent,
+} from '@polygon-nightfall/common-files/utils/event-queue.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
-import { startMakingChallenges, stopMakingChallenges } from '../services/challenges.mjs';
+import {
+  startMakingChallenges,
+  stopMakingChallenges,
+  createChallenge,
+  commitToChallenge,
+} from '../services/challenges.mjs';
+import { BlockError } from '../classes/index.mjs';
+import { saveInvalidBlock, getTransactionByBlockNumberL2 } from '../services/database.mjs';
+import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
 
 const router = express.Router();
 

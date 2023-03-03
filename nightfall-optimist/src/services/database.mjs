@@ -270,6 +270,11 @@ export async function getAllRegisteredProposersCount() {
   const db = connection.db(OPTIMIST_DB);
   return db.collection(PROPOSER_COLLECTION).countDocuments();
 }
+export async function getAllRegisteredProposers() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(PROPOSER_COLLECTION).find().toArray();
+}
 
 /**
  * Save an unprocessed transaction

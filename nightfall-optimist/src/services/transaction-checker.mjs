@@ -272,10 +272,12 @@ async function verifyProof(transaction, stateConractInstance, shieldContractInst
 
     const startTimeVerify = new Date().getTime();
     const verifies = await groth16Verify(vk, inputs, proof, transaction.circuitHash);
+
     console.log(
       'verifyProof get verify RRRRRR',
       new Date().getTime() - startTimeVerify,
       process.pid,
+      verifies,
     );
 
     console.log(
