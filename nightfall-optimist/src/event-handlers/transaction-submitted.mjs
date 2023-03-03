@@ -19,9 +19,9 @@ const { STATE_CONTRACT_NAME } = constants;
 
 const { txWorkerUrl, txWorkerCount } = config.TX_WORKER_PARAMS;
 
-// Flag to enable/disable submitTransaction processing
+// Flag to enable/disable submitTransaction processing -> Debug
 let _submitTransactionEnable = true;
-// Flag to enable/disable worker processing
+// Flag to enable/disable worker processing -> Debug
 let _workerEnable = true;
 
 export function workerEnableSet(flag) {
@@ -56,24 +56,11 @@ export async function submitTransaction(transaction, txEnable) {
     saveBufferedTransaction({ ...transaction });
     return;
   }
-  const startTimeTx = new Date().getTime();
 
   try {
     const stateInstance = await waitForContract(STATE_CONTRACT_NAME);
 
-    console.log(
-      'Transaction State instance time RRRRRR',
-      new Date().getTime() - startTimeTx,
-      process.pid,
-    );
-    const startTimeTxInstance = new Date().getTime();
     const circuitInfo = await stateInstance.methods.getCircuitInfo(transaction.circuitHash).call();
-    console.log(
-      'Transaction State call circuit info time RRRRRR',
-      new Date().getTime() - startTimeTxInstance,
-      process.pid,
-    );
-    const startTimeTxScrow = new Date().getTime();
     if (circuitInfo.isEscrowRequired) {
       const isCommitmentEscrowed = await stateInstance.methods
         .getCommitmentEscrowed(transaction.commitments[0])
@@ -87,13 +74,6 @@ export async function submitTransaction(transaction, txEnable) {
     }
     logger.info({ msg: 'Checking transaction validity...' });
 
-    console.log(
-      'Transaction Scrow time RRRRRR',
-      new Date().getTime() - startTimeTxScrow,
-      process.pid,
-    );
-    const startTimeTxCheckTx = new Date().getTime();
-
     const nonZeroCommitmentsAndNullifiers = await checkTransaction({
       transaction,
       checkDuplicatesInL2: true,
@@ -105,18 +85,6 @@ export async function submitTransaction(transaction, txEnable) {
       deleteDuplicateCommitmentsAndNullifiersFromMemPool(nonZeroCommitments, nonZeroNullifiers),
       saveTransaction({ ...transaction }),
     ]);
-
-    console.log(
-      'Transaction check time RRRRRR',
-      new Date().getTime() - startTimeTxCheckTx,
-      process.pid,
-    );
-
-    console.log(
-      'Transaction processing time RRRRRR',
-      new Date().getTime() - startTimeTx,
-      process.pid,
-    );
   } catch (err) {
     if (err instanceof TransactionError) {
       logger.warn(
@@ -125,6 +93,32 @@ export async function submitTransaction(transaction, txEnable) {
     } else {
       logger.error(err);
     }
+  }
+}
+
+async function dispatchTransactionSubmittedEvent(transaction) {
+  // If TX WORKERS enabled or not responsive, route transaction requests to main thread
+  if (Number(txWorkerCount) && _workerEnable) {
+    axios
+      .post(`${txWorkerUrl}/tx-submitted`, {
+        tx: transaction,
+        enable: _submitTransactionEnable === true,
+      })
+      /*
+      .get(`${txWorkerUrl}/tx-submitted`, {
+        params: {
+          tx: transaction,
+          enable: _submitTransactionEnable === true,
+        },
+      })
+      */
+      .catch(function (error) {
+        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
+        submitTransaction(transaction, _submitTransactionEnable);
+      });
+  } else {
+    // Main thread (no workers)
+    await submitTransaction(transaction, _submitTransactionEnable);
   }
 }
 
@@ -158,27 +152,5 @@ export async function transactionSubmittedEventHandler(eventParams) {
     _workerEnable,
   });
 
-  // If TX WORKERS enabled or not responsive, route transaction requests to main thread
-  if (Number(txWorkerCount) && _workerEnable) {
-    axios
-    /*
-      .post(`${txWorkerUrl}/tx-submitted`, {
-        tx: transaction,
-        enable: _submitTransactionEnable === true,
-      })
-      */
-      .get(`${txWorkerUrl}/tx-submitted`, {
-        params: {
-          tx: transaction,
-          enable: _submitTransactionEnable === true,
-        },
-      })
-      .catch(function (error) {
-        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
-        submitTransaction(transaction, _submitTransactionEnable);
-      });
-  } else {
-    // Main thread (no workers)
-    await submitTransaction(transaction, _submitTransactionEnable);
-  }
+  await dispatchTransactionSubmittedEvent(transaction);
 }

@@ -45,6 +45,7 @@ async function blockProposedEventHandler(data) {
   const { block, transactions } = await getProposeBlockCalldata(data);
   const nextBlockNumberL2 = await getNumberOfL2Blocks();
 
+  // Check block preconditions and raise exception
   if (!transactionHashL1) {
     throw new Error('Layer 2 blocks must have a valid Layer 1 transactionHash');
   }
@@ -96,6 +97,7 @@ async function blockProposedEventHandler(data) {
   let timeBlockL2 = await getTimeByBlock(transactionHashL1);
   timeBlockL2 = new Date(timeBlockL2 * 1000);
 
+  // Block preconditions are already checked, so we can saveBlock and transactions simultaneously
   await Promise.all([
     // save the block to facilitate later lookup of block data
     // we will save before checking because the database at any time should reflect the state the blockchain holds
@@ -165,6 +167,9 @@ async function blockProposedEventHandler(data) {
       await saveInvalidBlock({
         invalidCode: err.code,
         invalidMessage: err.message,
+        blockNumber: currentBlockCount,
+        transactionHashL1,
+        timeBlockL2,
         ...block,
       });
       const txDataToSign = await createChallenge(block, transactions, err);

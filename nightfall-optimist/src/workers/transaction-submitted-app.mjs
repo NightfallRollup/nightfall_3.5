@@ -48,19 +48,19 @@ async function initWorkers() {
       res.sendStatus(200);
     });
 
-    /* 
     // End point to submit transaction to tx worker
     app.post('/tx-submitted', async (req, res) => {
       const { tx, enable } = req.body;
       try {
-        const response = submitTransaction(JSON.parse(tx), enable === 'true');
+        const response = submitTransaction(tx, enable);
         res.json(response);
       } catch (err) {
+        console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', tx, enable, typeof enable, err);
         res.sendStatus(500);
       }
     });
-    */
 
+    /*
     // End point to submit transaction to tx worker
     app.get('/tx-submitted', async (req, res) => {
       const { tx, enable } = req.query;
@@ -71,6 +71,7 @@ async function initWorkers() {
         res.sendStatus(500);
       }
     });
+    */
 
     // End point to check transaction to tx worker
     app.post('/check-transaction', async (req, res) => {

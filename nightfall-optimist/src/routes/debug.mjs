@@ -48,18 +48,18 @@ router.post('/tx-submitted-enable', async (req, res) => {
     if (Number(txWorkerCount) && workerEnableGet()) {
       transactions.forEach(async tx =>
         axios
-        /*
           .post(`${txWorkerUrl}/tx-submitted`, {
-              tx,
-              enable: true,
+            tx,
+            enable: true,
           })
-          */
+          /*
           .get(`${txWorkerUrl}/tx-submitted`, {
             params: {
               tx,
               enable: true,
             },
           })
+          */
           .catch(function (error) {
             if (error.request) {
               submitTransaction(tx, true);
