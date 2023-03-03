@@ -35,25 +35,29 @@ class PerformanceBenchmark {
 
     const stats = Object.entries(groupEvents).reduce((accumulator, [key, value]) => {
       const count = value.start.length;
-      const duration = value.stop.map((item, index) => ({
+      const samples = value.stop.map((item, index) => ({
         start: value.start[index],
         stop: item,
         duration: item - value.start[index],
       }));
-      const durationMap = duration.map(i => i.duration);
-      const durationMax = Math.max(...durationMap);
-      const ducrationMin = Math.min(...durationMap);
-      const durationMean = durationMap.reduce((a, b) => a + b, 0) / count;
+      const samplesMap = samples.map(i => i.duration);
+      const max = Math.max(...samplesMap);
+      const min = Math.min(...samplesMap);
+      const mean = samplesMap.reduce((a, b) => a + b, 0) / count;
+      const stddev = Math.sqrt(
+        samplesMap.reduce((sum, sample) => sum + (sample - mean) ** 2, 0) / count,
+      );
 
       return {
         ...accumulator,
         [key]: {
           id: key,
           count,
-          duration,
-          durationMax,
-          ducrationMin,
-          durationMean,
+          samples,
+          max,
+          min,
+          mean,
+          stddev,
         },
       };
     }, {});
