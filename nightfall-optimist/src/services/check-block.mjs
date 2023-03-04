@@ -23,7 +23,7 @@ import { checkTransaction } from './transaction-checker.mjs';
 import { workerEnableGet } from '../event-handlers/transaction-submitted.mjs';
 
 const { ZERO } = constants;
-const { txWorkerUrl } = config.TX_WORKER_PARAMS;
+const { txWorkerUrl, FULL_VERIFICATION_SELF_PROPOSED_BLOCKS } = config.TX_WORKER_PARAMS;
 
 /**
  * Check that the leafCount is correct
@@ -396,7 +396,7 @@ export async function checkBlock(block, transactions) {
 
   // Check if my proposer build the received block. If so, we can skip transaction processing
   const proposers = (await getAllRegisteredProposers()).map(p => p._id.toLowerCase());
-  if (proposers.includes(block.proposer)) {
+  if (FULL_VERIFICATION_SELF_PROPOSED_BLOCKS !== 'true' && proposers.includes(block.proposer)) {
     return;
   }
 

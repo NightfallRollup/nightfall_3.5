@@ -38,7 +38,8 @@ const transpileBlockAssembler = (_pathToSrc, _pathToInject) => {
   // Inject incorrect root, incorrect leaf and incorrect frontier hash bad block type
   const injectBadBlocks = fs.readFileSync(_pathToInject, 'utf-8');
   srcTxDataToSignPreamble = /(\n|.)*(?=const unsignedProposeBlockTransaction = await \()/g;
-  srcTxDataToSignPostamble = /let count = 0;(\n|.)*/g;
+  // srcTxDataToSignPostamble = /let count = 0;(\n|.)*/g;
+  srcTxDataToSignPostamble = /await sendBlockToProposer(\n|.)*/g;
   [srcPre] = srcFile.match(srcTxDataToSignPreamble);
   [srcPost] = srcFile.match(srcTxDataToSignPostamble);
   srcFile = `${srcPre}\n${injectBadBlocks}\n${srcPost}`;
