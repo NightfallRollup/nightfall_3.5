@@ -366,6 +366,8 @@ export async function deleteDuplicateCommitmentsAndNullifiersFromMemPool(
     transactionHash: { $nin: transactionHashes },
     mempool: true,
   };
+  const toDelete = await db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
+  if (toDelete.length) console.log('Transactions to delete', toDelete);
   return db.collection(TRANSACTIONS_COLLECTION).deleteMany(query);
 }
 
