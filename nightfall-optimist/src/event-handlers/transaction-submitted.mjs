@@ -87,7 +87,9 @@ export async function submitTransaction(transaction, txEnable) {
     const nonZeroCommitments = nonZeroCommitmentsAndNullifiers[0];
     const nonZeroNullifiers = nonZeroCommitmentsAndNullifiers[1];
     Promise.all([
-      deleteDuplicateCommitmentsAndNullifiersFromMemPool(nonZeroCommitments, nonZeroNullifiers),
+      deleteDuplicateCommitmentsAndNullifiersFromMemPool(nonZeroCommitments, nonZeroNullifiers, [
+        transaction.transactionHash,
+      ]),
       saveTransaction({ ...transaction }),
     ]);
   } catch (err) {
