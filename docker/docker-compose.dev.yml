@@ -91,9 +91,9 @@ services:
       - 9229:9229
     command: ['npm', 'run', 'dev']
 
-  opt-txwt:
+  opt-txw:
     build:
-      dockerfile: docker/optimist-tx-submitted-worker.Dockerfile
+      dockerfile: docker/opt_txw.Dockerfile
       context: ..
     volumes:
       - type: bind

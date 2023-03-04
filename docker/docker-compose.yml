@@ -159,7 +159,7 @@ services:
 
   opt-txw:
     build:
-      dockerfile: docker/optimist-tx-submitted-worker.Dockerfile
+      dockerfile: docker/opt_txw.Dockerfile
       context: ..
     image: opt-txw:latest
     depends_on:
