@@ -22,6 +22,7 @@ chai.use(chaiAsPromised);
 
 // we need require here to import jsons
 const environment = config.ENVIRONMENTS[process.env.ENVIRONMENT] || config.ENVIRONMENTS.localhost;
+const { optimistTxWorkerApiUrl } = environment;
 
 const {
   tokenConfigs: { tokenType, tokenId },
@@ -135,7 +136,8 @@ describe('Tx worker test', () => {
       process.exit();
     }
 
-    await nf3Proposer1.registerProposer('http://opt-txw', minStake);
+    console.log(`Connecting to TX Workers at ${optimistTxWorkerApiUrl}`);
+    await nf3Proposer1.registerProposer(optimistTxWorkerApiUrl, minStake);
     await nf3Proposer1.startProposer();
 
     // Proposer listening for incoming events
@@ -156,7 +158,6 @@ describe('Tx worker test', () => {
      * speed up the process
      */
     it('Initialize tx worker', async function () {
-      const _initTx = 16;
       // enable workers
       await axios.post(`${environment.optimistApiUrl}/debug/tx-worker-enable`, {
         enable: true,
@@ -168,7 +169,7 @@ describe('Tx worker test', () => {
       // We create enough transactions to initialize tx workers
       await depositNTransactions(
         nf3Users[0],
-        _initTx,
+        initTx,
         erc20Address,
         tokenType,
         depositValue,
@@ -178,7 +179,7 @@ describe('Tx worker test', () => {
 
       let nTx = 0;
       // Wait until all transactions are generated
-      while (nTx < _initTx) {
+      while (nTx < initTx) {
         nTx = await numberOfBufferedTransactions();
         console.log('N buffered transactions', nTx);
         await waitForTimeout(1000);

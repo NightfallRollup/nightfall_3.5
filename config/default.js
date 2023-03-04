@@ -68,7 +68,7 @@ module.exports = {
   MAX_QUEUE: 10,
   TX_WORKER_PARAMS: {
     txWorkerCount: process.env.TX_WORKER_COUNT || 100,
-    txWorkerUrl: process.env.TX_WORKER_URL || 'http:opt-txw',
+    txWorkerUrl: process.env.TX_WORKER_URL || 'http://opt-txw',
   },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,
@@ -206,7 +206,7 @@ module.exports = {
       chainId: 1,
       clientApiUrl: '',
       optimistApiUrl: '',
-      optimistTxworkerApiUrl: '',
+      optimistTxWorkerApiUrl: '',
       optimistWsUrl: '',
       web3WsUrl: '',
     },
@@ -245,9 +245,9 @@ module.exports = {
       optimistApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
-      optimistTxworkerApiUrl: process.env.OPTIMIST_HOST
-        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
-        : 'http://localhost:8081',
+      optimistTxWorkerApiUrl: process.env.OPTIMIST_TX_WORKER_HOST
+        ? `http://${process.env.OPTIMIST_TX_WORKER_HOST}:${process.env.OPTIMIST_TX_WORKER_PORT}`
+        : 'http://opt-txw',
       optimistWsUrl: process.env.OPTIMIST_HOST
         ? `ws://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_WS_PORT}`
         : 'ws://localhost:8082',
@@ -281,7 +281,7 @@ module.exports = {
       chainId: 1337,
       clientApiUrl: `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`,
       optimistApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
-      optimistTxWorkerApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
+      optimistTxWorkerApiUrl: `https://${process.env.OPTIMIST_TX_WORKER_HOST}`,
       optimistWsUrl: `wss://${process.env.OPTIMIST_HOST}`,
       proposerBaseUrl: `https://${process.env.PROPOSER_HOST}`,
       web3WsUrl: `wss://${process.env.BLOCKCHAIN_WS_HOST}${process.env.BLOCKCHAIN_PATH}`,
