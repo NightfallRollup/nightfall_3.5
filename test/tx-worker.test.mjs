@@ -156,7 +156,7 @@ describe('Tx worker test', () => {
      * speed up the process
      */
     it('Initialize tx worker', async function () {
-      const _initTx=16
+      const _initTx = 16;
       // enable workers
       await axios.post(`${environment.optimistApiUrl}/debug/tx-worker-enable`, {
         enable: true,
