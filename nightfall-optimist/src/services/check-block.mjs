@@ -243,8 +243,8 @@ async function checkDuplicateNullifiersWithinBlock(block, transactions) {
   }
 }
 
-async function buildErrorMessage(err, block, transactions, transaction) {
-  const newError = { ...err };
+async function buildErrorMessage(error, block, transactions, transaction) {
+  const newError = { ...error };
   if (newError.code === 0 || newError.code === 1) {
     let siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
       .transactionHashSiblingPath;
@@ -278,10 +278,6 @@ async function buildErrorMessage(err, block, transactions, transaction) {
       siblingPath1,
     };
   }
-  return newError;
-}
-
-async function createAndCommitChallenge(newError, transaction, block) {
   const err = new BlockError(
     `The transaction check failed with error: ${newError.message}`,
     Number(newError.code) + 2, // mapping transaction error to block error
@@ -290,28 +286,38 @@ async function createAndCommitChallenge(newError, transaction, block) {
       transactionHashIndex: block.transactionHashes.indexOf(transaction.transactionHash),
     },
   );
-  logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
-  logger.info(`Block is invalid, stopping any block production`);
-  // We enqueue an event onto the stopQueue to halt block production.
-  // This message will not be printed because event dequeuing does not run the job.
-  // This is fine as we are just using it to stop running.
-  increaseBlockInvalidCounter();
-  await saveInvalidBlock({
-    invalidCode: err.code,
-    invalidMessage: err.message,
-    ...block,
-  });
+  return err;
+}
 
-  const transactions = await getTransactionByBlockNumberL2(block.blockNumberL2);
+async function createAndCommitChallenge(err, block) {
+  if (err instanceof BlockError) {
+    logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
+    logger.info(`Block is invalid, stopping any block production`);
+    // We enqueue an event onto the stopQueue to halt block production.
+    // This message will not be printed because event dequeuing does not run the job.
+    // This is fine as we are just using it to stop running.
+    increaseBlockInvalidCounter();
+    await saveInvalidBlock({
+      invalidCode: err.code,
+      invalidMessage: err.message,
+      ...block,
+    });
 
-  const txDataToSign = await createChallenge(block, transactions, err);
-  // push the challenge into the stop queue.  This will stop blocks being
-  // made until the challenge has run and a rollback has happened.  We could
-  // push anything into the queue and that would work but it's useful to
-  // have the actual challenge to support syncing
-  logger.debug('enqueuing event to stop queue');
-  await enqueueEvent(commitToChallenge, 2, txDataToSign);
-  await commitToChallenge(txDataToSign);
+    const transactions = await getTransactionByBlockNumberL2(block.blockNumberL2);
+
+    const txDataToSign = await createChallenge(block, transactions, err);
+    // push the challenge into the stop queue.  This will stop blocks being
+    // made until the challenge has run and a rollback has happened.  We could
+    // push anything into the queue and that would work but it's useful to
+    // have the actual challenge to support syncing
+    logger.debug('enqueuing event to stop queue');
+    await enqueueEvent(commitToChallenge, 2, txDataToSign);
+    await commitToChallenge(txDataToSign);
+    await commitToChallenge(txDataToSign);
+  } else {
+    logger.error(err.stack);
+    throw new Error(err);
+  }
 }
 
 // Dispatch transactions to optimist for checking
@@ -386,13 +392,18 @@ async function dispatchTransactions(block, transactions) {
  */
 // eslint-disable-next-line import/prefer-default-export
 export async function checkBlock(block, transactions) {
-  await Promise.all([
-    checkLeafCount(block),
-    checkBlockRoot(block),
-    checkFrontier(block),
-    checkDuplicateCommitmentsWithinBlock(block, transactions),
-    checkDuplicateNullifiersWithinBlock(block, transactions),
-  ]);
+  try {
+    await Promise.all([
+      checkLeafCount(block),
+      checkBlockRoot(block),
+      checkFrontier(block),
+      checkDuplicateCommitmentsWithinBlock(block, transactions),
+      checkDuplicateNullifiersWithinBlock(block, transactions),
+    ]);
+  } catch (err) {
+    createAndCommitChallenge(err, block);
+    return;
+  }
 
   // Check if my proposer build the received block. If so, we can skip transaction processing
   const proposers = (await getAllRegisteredProposers()).map(p => p._id.toLowerCase());
@@ -404,6 +415,6 @@ export async function checkBlock(block, transactions) {
 
   if (error !== null) {
     const newError = await buildErrorMessage(error, block, transactions, incorrectTransaction);
-    createAndCommitChallenge(newError, incorrectTransaction, block);
+    createAndCommitChallenge(newError, block);
   }
 }
