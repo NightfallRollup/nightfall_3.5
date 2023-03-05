@@ -123,7 +123,7 @@ async function blockProposedEventHandler(data) {
     deleteDuplicateCommitmentsAndNullifiersFromMemPool(
       blockCommitments,
       blockNullifiers,
-      block.transactionHashes,
+      block.transactionHashes,null
     ),
     getTreeByBlockNumberL2(block.blockNumberL2 - 1),
   ]);
@@ -149,8 +149,12 @@ async function blockProposedEventHandler(data) {
   // Instead, what happens now is that any good/bad blocks on top of the first bad block
   // will get saved and eventually all these blocks will be removed as part of the rollback
   // of the first bad block
-  if (queues[2].length === 0) await checkBlock(block, transactions);
-  logger.info('Block Checker - Block was valid');
+  try {
+    if (queues[2].length === 0) await checkBlock(block, transactions);
+    logger.info('Block Checker - Block was valid');
+  } catch (err) {
+    logger.error('Error detected in block', err);
+  }
 }
 
 export default blockProposedEventHandler;

@@ -41,7 +41,7 @@ services:
       # we don't want adversary who create bad block to be challenger as well
       # so for adversary default is false unlike optimist
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
-      FULL_VERIFICATION_SELF_PROPOSED_BLOCKS: false
+      FULL_VERIFICATION_SELF_PROPOSED_BLOCKS: 'false'
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       TX_WORKER_URL: http://adversary-txw
     command: ['npm', 'run', 'dev']

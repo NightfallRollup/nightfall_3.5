@@ -243,7 +243,7 @@ async function checkDuplicateNullifiersWithinBlock(block, transactions) {
   }
 }
 
-async function buildErrorMessage(error, block, transactions, transaction) {
+async function buildBlockErrorMessage(error, block, transactions, transaction) {
   const newError = { ...error };
   if (newError.code === 0 || newError.code === 1) {
     let siblingPath1 = (await getTransactionHashSiblingInfo(transaction.transactionHash))
@@ -313,11 +313,10 @@ async function createAndCommitChallenge(err, block) {
     logger.debug('enqueuing event to stop queue');
     await enqueueEvent(commitToChallenge, 2, txDataToSign);
     await commitToChallenge(txDataToSign);
-    await commitToChallenge(txDataToSign);
   } else {
     logger.error(err.stack);
-    throw new Error(err);
   }
+  throw new Error(err);
 }
 
 // Dispatch transactions to optimist for checking
@@ -354,6 +353,7 @@ async function dispatchTransactions(block, transactions) {
   let incorrectTransaction = null;
   if (workerEnableGet()) {
     try {
+      logger.info('Dispatching transaction verification to workers');
       const transactionStatus = (
         await Promise.all(
           transactions.map(transaction =>
@@ -375,11 +375,13 @@ async function dispatchTransactions(block, transactions) {
         incorrectTransaction = transactions[transactionIndex];
       }
     } catch (err) {
+      logger.info('Dispatching transaction verification to optimist');
       // If exception is caught it means that transaction workers are not available. Lets verify
       //    transactions with optimist
       ({ error, incorrectTransaction } = await dispatchTransactionsToOptimist(block, transactions));
     }
   } else {
+    logger.info('Dispatching transaction verification to optimist');
     ({ error, incorrectTransaction } = await dispatchTransactionsToOptimist(block, transactions));
   }
   return { error, incorrectTransaction };
@@ -401,20 +403,21 @@ export async function checkBlock(block, transactions) {
       checkDuplicateNullifiersWithinBlock(block, transactions),
     ]);
   } catch (err) {
-    createAndCommitChallenge(err, block);
-    return;
+    await createAndCommitChallenge(err, block);
   }
 
   // Check if my proposer build the received block. If so, we can skip transaction processing
   const proposers = (await getAllRegisteredProposers()).map(p => p._id.toLowerCase());
   if (FULL_VERIFICATION_SELF_PROPOSED_BLOCKS !== 'true' && proposers.includes(block.proposer)) {
+    logger.info('Skipping transaction verification');
     return;
   }
 
   const { error, incorrectTransaction } = await dispatchTransactions(block, transactions);
 
   if (error !== null) {
-    const newError = await buildErrorMessage(error, block, transactions, incorrectTransaction);
-    createAndCommitChallenge(newError, block);
+    logger.error({ msg: `Error in detected in transaction ${incorrectTransaction}`, error });
+    const newError = await buildBlockErrorMessage(error, block, transactions, incorrectTransaction);
+    await createAndCommitChallenge(newError, block);
   }
 }
