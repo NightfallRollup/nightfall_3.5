@@ -44,23 +44,36 @@ export function workerEnableGet() {
 /**
  * Transaction Event Handler processing.
  *
- * @param {Object} _transaction Transaction data
+ * @param {Object} eventParams Transaction data
  * @param {bolean} txEnable Flag indicating if transactions should be processed immediatelly (true)
  * or should be stored in a temporal buffer.
  */
-export async function submitTransaction(transaction, txEnable) {
-  logger.info({
-    msg: 'Transaction Worker - New transaction received.',
-    transaction,
-    txEnable,
-  });
-
+export async function submitTransaction(eventParams, txEnable) {
   // Test mode. If txEnable is true, we process transactions as fast as we can (as usual). If false, then we
   // store these transactions in a buffer with the idea of processing them back later at once.
   if (!txEnable) {
-    saveBufferedTransaction({ ...transaction });
+    saveBufferedTransaction({ ...eventParams });
     return;
   }
+
+  const { offchain = false, ...data } = eventParams;
+  let transaction;
+  if (offchain) {
+    transaction = data;
+    transaction.blockNumber = 'offchain';
+    transaction.transactionHashL1 = 'offchain';
+  } else {
+    transaction = await getTransactionSubmittedCalldata(data);
+    transaction.blockNumber = data.blockNumber;
+    transaction.transactionHashL1 = data.transactionHash;
+  }
+
+  logger.info({
+    msg: 'Transaction Handler - New transaction received.',
+    transaction,
+    _workerEnable,
+    txEnable,
+  });
 
   try {
     const stateInstance = await waitForContract(STATE_CONTRACT_NAME);
@@ -103,53 +116,26 @@ export async function submitTransaction(transaction, txEnable) {
   }
 }
 
-// Dispatches transaction to Tx Workers if available or to self if workers not available
-async function dispatchTransactionSubmittedEvent(transaction) {
-  // If TX WORKERS enabled or not responsive, route transaction requests to main thread
-  if (_workerEnable) {
-    axios
-      .post(`${txWorkerUrl}/tx-submitted`, {
-        tx: transaction,
-        enable: _submitTransactionEnable === true,
-      })
-      .catch(function (error) {
-        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
-        submitTransaction(transaction, _submitTransactionEnable);
-      });
-  } else {
-    // Main thread (no workers)
-    await submitTransaction(transaction, _submitTransactionEnable);
-  }
-}
-
 /**
  * This handler runs whenever a new transaction is submitted to the blockchain
  * Transaction Event Handler processing. It can be processed by main thread
  * or by worker thread
- * @param {Object} _transaction Transaction data
- * @param {boolean} fromBlockProposer Flag indicating whether this transaction comes from
- * block proposer (for those transactions that werent picked by current proposer).
- * @param {bolean} txEnable Flag indicating if transactions should be processed immediatelly (true)
- * or should be stored in a temporal buffer.
+ * @param {Object} eventParams Transaction data
  */
 export async function transactionSubmittedEventHandler(eventParams) {
-  const { offchain = false, ...data } = eventParams;
-  let transaction;
-  if (offchain) {
-    transaction = data;
-    transaction.blockNumber = 'offchain';
-    transaction.transactionHashL1 = 'offchain';
+  // If TX WORKERS enabled or not responsive, route transaction requests to main thread
+  if (_workerEnable) {
+    axios
+      .post(`${txWorkerUrl}/transaction-submitted`, {
+        eventParams,
+        enable: _submitTransactionEnable === true,
+      })
+      .catch(function (error) {
+        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
+        submitTransaction(eventParams, _submitTransactionEnable);
+      });
   } else {
-    transaction = await getTransactionSubmittedCalldata(data);
-    transaction.blockNumber = data.blockNumber;
-    transaction.transactionHashL1 = data.transactionHash;
+    // Main thread (no workers)
+    await submitTransaction(eventParams, _submitTransactionEnable);
   }
-
-  logger.info({
-    msg: 'Transaction Handler - New transaction received.',
-    transaction,
-    _workerEnable,
-  });
-
-  await dispatchTransactionSubmittedEvent(transaction);
 }

@@ -127,11 +127,11 @@ export async function initialBlockSync(proposer) {
   const lastBlockNumberL2 = Number(
     (await stateContractInstance.methods.getNumberOfL2Blocks().call()) - 1,
   );
+  // enable tx workers
+  workerEnableSet(true);
   if (lastBlockNumberL2 === -1) {
     unpauseQueue(0); // queues are started paused, therefore we need to unpause them before proceeding.
     unpauseQueue(1);
-    // enable tx workers
-    workerEnableSet(true);
     try {
       startMakingChallenges();
     } catch (err) {

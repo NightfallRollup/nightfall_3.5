@@ -30,7 +30,7 @@ const {
   signingKeys,
 } = config.TEST_OPTIONS;
 
-const initTx = 32;
+const initTx = 128;
 const nf3Users = [new Nf3(signingKeys.user1, environment), new Nf3(signingKeys.user2, environment)];
 const nf3Proposer1 = new Nf3(signingKeys.proposer1, environment);
 const transferValue = 1;
@@ -46,7 +46,7 @@ let txPerSecondWorkersOn;
 // Generated deposits and transfers
 const generateNTransactions = async () => {
   // disable worker processing and store transactions in tmp collection
-  await axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, {
+  await axios.post(`${environment.optimistApiUrl}/debug/transaction-submitted-enable`, {
     enable: false,
   });
   // Deposits to cover some transfers
@@ -96,7 +96,7 @@ const generateNTransactions = async () => {
   nTx = await numberOfMempoolTransactions();
   console.log(`Start transaction processing ${nTx}/${nTotalTx}`);
   // enable worker processing and process transactions in tmp
-  axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, { enable: true });
+  axios.post(`${environment.optimistApiUrl}/debug/transaction-submitted-enable`, { enable: true });
   const startTimeTx = new Date().getTime();
   // while unprocessed transactions (nTx) is less than number of transactions generated (initTx),
   // and number of transactions increases (first block is generated)
@@ -163,7 +163,7 @@ describe('Tx worker test', () => {
         enable: true,
       });
       // disable worker processing and store transactions in tmp collection
-      await axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, {
+      await axios.post(`${environment.optimistApiUrl}/debug/transaction-submitted-enable`, {
         enable: false,
       });
       // We create enough transactions to initialize tx workers
@@ -186,7 +186,9 @@ describe('Tx worker test', () => {
       }
       console.log('Start transaction processing...');
       // enable worker processing and process transactions in tmp
-      axios.post(`${environment.optimistApiUrl}/debug/tx-submitted-enable`, { enable: true });
+      axios.post(`${environment.optimistApiUrl}/debug/transaction-submitted-enable`, {
+        enable: true,
+      });
       // leave some time for transaction processing
       await waitForTimeout(1000);
       let pendingTx = 1;

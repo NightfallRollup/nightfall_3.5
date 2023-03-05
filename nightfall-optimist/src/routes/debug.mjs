@@ -36,7 +36,7 @@ router.post('/tx-worker-enable', async (req, res) => {
  * Enable/Disable tx processing. If disabled, transactions will be stored in a temporary collection. When
  * processing is enabled back, tmp collection is emptied and transactions processed
  */
-router.post('/tx-submitted-enable', async (req, res) => {
+router.post('/transaction-submitted-enable', async (req, res) => {
   const { enable } = req.body;
 
   // If we enable  submitTransactions, we process al events in the buffer
@@ -47,8 +47,8 @@ router.post('/tx-submitted-enable', async (req, res) => {
     if (workerEnableGet()) {
       transactions.forEach(async tx =>
         axios
-          .post(`${txWorkerUrl}/tx-submitted`, {
-            tx,
+          .post(`${txWorkerUrl}/transaction-submitted`, {
+            eventParams: tx,
             enable: true,
           })
           .catch(function (error) {
