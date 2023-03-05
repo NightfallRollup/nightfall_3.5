@@ -310,7 +310,7 @@ async function createAndCommitChallenge(err, block) {
     // made until the challenge has run and a rollback has happened.  We could
     // push anything into the queue and that would work but it's useful to
     // have the actual challenge to support syncing
-    logger.debug('enqueuing event to stop queue');
+    logger.debug(`enqueuing event to stop queue`);
     await enqueueEvent(commitToChallenge, 2, txDataToSign);
     await commitToChallenge(txDataToSign);
   } else {
@@ -416,7 +416,6 @@ export async function checkBlock(block, transactions) {
   const { error, incorrectTransaction } = await dispatchTransactions(block, transactions);
 
   if (error !== null) {
-    logger.error({ msg: `Error in detected in transaction ${incorrectTransaction}`, error });
     const newError = await buildBlockErrorMessage(error, block, transactions, incorrectTransaction);
     await createAndCommitChallenge(newError, block);
   }

@@ -123,7 +123,7 @@ async function blockProposedEventHandler(data) {
     deleteDuplicateCommitmentsAndNullifiersFromMemPool(
       blockCommitments,
       blockNullifiers,
-      block.transactionHashes,null
+      block.transactionHashes,
     ),
     getTreeByBlockNumberL2(block.blockNumberL2 - 1),
   ]);

@@ -32,7 +32,6 @@ const CACHE_FEE_L2_TOKEN_ADDRESS = new Map();
 async function checkDuplicateCommitment({
   transaction,
   checkDuplicatesInL2,
-  buildDuplicateInL2Error,
   checkDuplicatesInMempool,
   transactionBlockNumberL2,
 }) {
@@ -50,9 +49,9 @@ async function checkDuplicateCommitment({
     );
 
     if (transactionMempoolHigherFee.length) {
-      logger.debug({
+      logger.error({
         msg: 'Duplicate mempool commitment with higher fee: ',
-        transactionMempoolHigherFee,
+        transactionMempoolHigherFee: transactionMempoolHigherFee[0],
         fee: transaction.fee,
       });
       throw new TransactionError(
@@ -72,25 +71,27 @@ async function checkDuplicateCommitment({
       const blockL2 = await getBlockByBlockNumberL2(transactionL2[0].blockNumberL2);
 
       if (blockL2 !== null) {
-        let siblingPath2;
-        let commitment;
-        let index;
-        if (buildDuplicateInL2Error) {
-          siblingPath2 = (await getTransactionHashSiblingInfo(transactionL2[0].transactionHash))
-            .transactionHashSiblingPath;
-          // find commitment,index from transaction that is duplicated
-          index = transaction.commitments.findIndex(c => transactionL2[0].comittments.includes(c));
-        }
+        const siblingPath2 = (await getTransactionHashSiblingInfo(transactionL2[0].transactionHash))
+          .transactionHashSiblingPath;
+        // find commitment,index from transaction that is duplicated
+        const index = transaction.commitments.findIndex(c =>
+          transactionL2[0].comittments.includes(c),
+        );
+        logger.error(
+          `The transaction has a duplicate commitment ${transaction.commitments[index]} in a previous L2 block`,
+        );
         throw new TransactionError(
-          `The transaction has a duplicate commitment ${commitment} in a previous L2 block`,
+          `The transaction has a duplicate commitment ${transaction.commitments[index]} in a previous L2 block`,
           0,
           {
-            duplicateCommitment1Index: index[0],
+            duplicateCommitment1Index: index,
             block2: blockL2,
-            transaction2: transactionL2,
-            transaction2Index: blockL2.transactionHashes.indexOf(transactionL2.transactionHash),
+            transaction2: transactionL2[0],
+            transaction2Index: blockL2.transactionHashes.indexOf(transactionL2[0].transactionHash),
             siblingPath2,
-            duplicateCommitment2Index: transactionL2.commitments.indexOf(commitment),
+            duplicateCommitment2Index: transactionL2[0].commitments.findIndex(c =>
+              transaction.commitments.includes(c),
+            ),
           },
         );
       }
@@ -102,7 +103,6 @@ async function checkDuplicateCommitment({
 async function checkDuplicateNullifier({
   transaction,
   checkDuplicatesInL2,
-  buildDuplicateInL2Error,
   checkDuplicatesInMempool,
   transactionBlockNumberL2,
 }) {
@@ -116,9 +116,9 @@ async function checkDuplicateNullifier({
     );
 
     if (transactionMempoolHigherFee.length) {
-      logger.debug({
+      logger.error({
         msg: 'Duplicate mempool nullifier with higher fee: ',
-        transactionMempoolHigherFee,
+        transactionMempoolHigherFee: transactionMempoolHigherFee[0],
         fee: transaction.fee,
       });
       throw new TransactionError(
@@ -135,28 +135,30 @@ async function checkDuplicateNullifier({
     // If a transaction was found, means that the commitment is duplicated
     if (transactionL2.length) {
       // Get the number of the block in L2 containing the duplicated commitment
-      const blockL2 = await getBlockByBlockNumberL2(transactionL2.blockNumberL2);
+      const blockL2 = await getBlockByBlockNumberL2(transactionL2[0].blockNumberL2);
 
       if (blockL2 !== null) {
-        let siblingPath2;
-        let nullifier;
-        let index;
-        if (buildDuplicateInL2Error) {
-          siblingPath2 = (await getTransactionHashSiblingInfo(transactionL2[0].transactionHash))
-            .transactionHashSiblingPath;
-          // find commitment,index from transaction that is duplicated
-          index = transaction.nullifiers.findIndex(c => transactionL2[0].nullifiers.includes(c));
-        }
+        const siblingPath2 = (await getTransactionHashSiblingInfo(transactionL2[0].transactionHash))
+          .transactionHashSiblingPath;
+        // find commitment,index from transaction that is duplicated
+        const index = transaction.nullifiers.findIndex(c =>
+          transactionL2[0].nullifiers.includes(c),
+        );
+        logger.error(
+          `The transaction has a duplicate nullifier ${transaction.nullifiers[index]} in a previous L2 block`,
+        );
         throw new TransactionError(
-          `The transaction has a duplicate nullifier ${nullifier} in a previous L2 block`,
+          `The transaction has a duplicate nullifier ${transaction.nullifiers[index]} in a previous L2 block`,
           1,
           {
-            duplicateNullifier1Index: index[0],
+            duplicateNullifier1Index: index,
             block2: blockL2,
-            transaction2: transactionL2,
-            transaction2Index: blockL2.transactionHashes.indexOf(transactionL2.transactionHash),
+            transaction2: transactionL2[0],
+            transaction2Index: blockL2.transactionHashes.indexOf(transactionL2[0].transactionHash),
             siblingPath2,
-            duplicateNullifier2Index: transactionL2.nullifiers.indexOf(nullifier),
+            duplicateNullifier2Index: transactionL2[0].nullifiers.findIndex(n =>
+              transaction.nullifiers.includes(n),
+            ),
           },
         );
       }
@@ -302,7 +304,7 @@ export async function checkTransaction({
       checkDuplicatesInMempool,
       transactionBlockNumberL2,
     }),
-    checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2, stateConractInstance),
+    checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2),
     verifyProof(transaction, stateConractInstance, shieldContractInstance),
   ]);
 

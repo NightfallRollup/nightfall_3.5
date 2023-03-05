@@ -61,6 +61,15 @@ services:
       - type: volume
         source: build
         target: /app/build/
+      - type: bind
+        source: ../test/adversary/lazy-optimist/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /app/config/default.js
     environment:
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
       BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
