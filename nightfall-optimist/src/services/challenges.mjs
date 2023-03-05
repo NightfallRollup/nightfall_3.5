@@ -246,7 +246,6 @@ export async function createChallenge(block, transactions, err) {
           salt,
         )
         .encodeABI();
-
       break;
     }
     // proof does not verify
