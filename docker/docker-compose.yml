@@ -39,7 +39,7 @@ services:
     environment:
       AUTHENTICATION_KEY: ${AUTHENTICATION_KEY}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-600}
-      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL} 
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
       BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
       BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
       CIRCOM_WORKER_HOST: ${CIRCOM_WORKER_HOST:-worker}
@@ -206,6 +206,7 @@ services:
       - nightfall_network
     command: --quiet
     volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - type: volume
         source: mongodb
         target: /data/db
