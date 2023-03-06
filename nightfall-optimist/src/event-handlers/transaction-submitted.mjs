@@ -126,7 +126,7 @@ export async function transactionSubmittedEventHandler(eventParams) {
   // If TX WORKERS enabled or not responsive, route transaction requests to main thread
   if (_workerEnable) {
     axios
-      .post(`${txWorkerUrl}/transaction-submitted`, {
+      .post(`${txWorkerUrl}/workers/transaction-submitted`, {
         eventParams,
         enable: _submitTransactionEnable === true,
       })

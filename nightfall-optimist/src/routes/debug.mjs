@@ -37,7 +37,7 @@ router.post('/transaction-submitted-enable', async (req, res) => {
     if (workerEnableGet()) {
       transactions.forEach(async tx =>
         axios
-          .post(`${txWorkerUrl}/transaction-submitted`, {
+          .post(`${txWorkerUrl}/workers/transaction-submitted`, {
             eventParams: tx,
             enable: true,
           })

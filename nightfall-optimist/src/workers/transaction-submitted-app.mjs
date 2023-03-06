@@ -9,11 +9,11 @@
   received. To configure Optimist in legacy mode, just provide and invalid value to TX_WORKER_URL.
 
   Else, the cluster of workers will provide three services to optimist:
-  - app.post('/transaction-submitted') : Takes an incomming transaction received by transactionSubmittedEventHandler and
+  - app.post('/workers/transaction-submitted') : Takes an incomming transaction received by transactionSubmittedEventHandler and
   dispatch it to an available worker
   - app.post('/proposer/offchain-transaction') : Processes offchain transaction. This is the endpoint that optimist
   can advertise when registering as a proposer so that clients send transactions here.
-  - app.post('/check-transaction') : Performs several checks on transactions (check duplicate commitment and nullifier, checks
+  - app.post('/workers/check-transaction') : Performs several checks on transactions (check duplicate commitment and nullifier, checks
      historic root block number and verifies transaction proof). It is thought mainly to offload optimist from
      processing transactions during block proposed events.
 */
@@ -63,7 +63,7 @@ async function initWorkers() {
 
     // End point to submit transactions to tx worker. It is called
     // by Optimist when receiving onchain transactions
-    app.post('/transaction-submitted', async (req, res) => {
+    app.post('/workers/transaction-submitted', async (req, res) => {
       const { eventParams, enable } = req.body;
       try {
         const response = submitTransaction(eventParams, enable);
@@ -75,7 +75,7 @@ async function initWorkers() {
 
     // End point to check transaction to tx worker. Called by
     // block proposed event handler
-    app.post('/check-transaction', async (req, res) => {
+    app.post('/workers/check-transaction', async (req, res) => {
       const { transaction, transactionBlockNumberL2 } = req.body;
       try {
         await checkTransaction({

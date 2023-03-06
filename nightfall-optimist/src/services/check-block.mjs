@@ -357,7 +357,7 @@ async function dispatchTransactions(block, transactions) {
       const transactionStatus = (
         await Promise.all(
           transactions.map(transaction =>
-            axios.post(`${txWorkerUrl}/check-transaction`, {
+            axios.post(`${txWorkerUrl}/workers/check-transaction`, {
               transaction,
               checkDuplicatesInL2: true,
               checkDuplicatesInMempool: true,
