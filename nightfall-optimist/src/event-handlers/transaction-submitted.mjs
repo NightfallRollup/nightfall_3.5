@@ -9,7 +9,6 @@ import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.
 import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
-  saveBufferedTransaction,
 } from '../services/database.mjs';
 import { checkTransaction } from '../services/transaction-checker.mjs';
 import TransactionError from '../classes/transaction-error.mjs';
@@ -18,16 +17,6 @@ import { getTransactionSubmittedCalldata } from '../services/process-calldata.mj
 const { STATE_CONTRACT_NAME } = constants;
 
 const { txWorkerUrl } = config.TX_WORKER_PARAMS;
-
-// Flag to enable/disable submitTransaction processing -> Debug
-//  If disabled, transactiosn are stored in a temporary collection. When enabled
-//  transactions from temporary collection are written on transactions collection.
-//  This emulates the optimist receiving many transactions simultaneously
-let _submitTransactionEnable = true;
-
-export function submitTransactionEnable(enable) {
-  _submitTransactionEnable = enable;
-}
 
 // Flag to enable/disable worker processing
 //  When disabled, workers are stopped. Workers are
@@ -45,17 +34,8 @@ export function workerEnableGet() {
  * Transaction Event Handler processing.
  *
  * @param {Object} eventParams Transaction data
- * @param {bolean} txEnable Flag indicating if transactions should be processed immediatelly (true)
- * or should be stored in a temporal buffer.
  */
-export async function submitTransaction(eventParams, txEnable) {
-  // Test mode. If txEnable is true, we process transactions as fast as we can (as usual). If false, then we
-  // store these transactions in a buffer with the idea of processing them back later at once.
-  if (!txEnable) {
-    saveBufferedTransaction({ ...eventParams });
-    return;
-  }
-
+export async function submitTransaction(eventParams) {
   const { offchain = false, ...data } = eventParams;
   let transaction;
   if (offchain) {
@@ -72,7 +52,6 @@ export async function submitTransaction(eventParams, txEnable) {
     msg: 'Transaction Handler - New transaction received.',
     transaction,
     _workerEnable,
-    txEnable,
   });
 
   try {
@@ -128,14 +107,13 @@ export async function transactionSubmittedEventHandler(eventParams) {
     axios
       .post(`${txWorkerUrl}/workers/transaction-submitted`, {
         eventParams,
-        enable: _submitTransactionEnable === true,
       })
       .catch(function (error) {
         logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
-        submitTransaction(eventParams, _submitTransactionEnable);
+        submitTransaction(eventParams);
       });
   } else {
     // Main thread (no workers)
-    await submitTransaction(eventParams, _submitTransactionEnable);
+    await submitTransaction(eventParams);
   }
 }
