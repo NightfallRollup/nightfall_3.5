@@ -10,13 +10,14 @@ env:
   WHITELISTING: disable
 
 jobs:
-  dependency-review:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: 'Checkout Repository'
-        uses: actions/checkout@v3
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@v2
+  # This dependency-review require public repository or GitHub Advance Security license
+  #dependency-review:
+  #  runs-on: ubuntu-20.04
+  #  steps:
+  #    - name: 'Checkout Repository'
+  #      uses: actions/checkout@v3
+  #    - name: 'Dependency Review'
+  #      uses: actions/dependency-review-action@v2
 
   eslint-check:
     runs-on: ubuntu-20.04

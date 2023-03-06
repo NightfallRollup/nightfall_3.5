@@ -18,6 +18,7 @@ const {
   TRANSACTIONS_COLLECTION,
   TIMBER_HEIGHT,
   HASH_TYPE,
+  CHALLENGE_PERIOD_SECONDS,
 } = config;
 
 /**
@@ -122,6 +123,38 @@ export async function saveBlock(_block) {
   const query = { _id: block._id };
   const update = { $set: block };
   return db.collection(SUBMITTED_BLOCKS_COLLECTION).updateOne(query, update, { upsert: true });
+}
+
+/**
+function to get last block not challengeable.
+*/
+export async function getLastBlockNotChallengeable() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(COMMITMENTS_DB);
+  const challengePeriodSeconds = new Date();
+  challengePeriodSeconds.setSeconds(challengePeriodSeconds.getSeconds() - CHALLENGE_PERIOD_SECONDS);
+  const query = { timeBlockL2: { $lt: challengePeriodSeconds } };
+  const [block] = await db
+    .collection(SUBMITTED_BLOCKS_COLLECTION)
+    .find(query)
+    .sort({ timeBlockL2: -1 })
+    .limit(1)
+    .toArray();
+  return block;
+}
+
+/**
+function to remove all not challengeable trees in Timber.
+*/
+export async function removeNotChallengeablesTrees() {
+  const block = await getLastBlockNotChallengeable();
+  if (block) {
+    const connection = await mongo.connection(MONGO_URL);
+    const db = connection.db(COMMITMENTS_DB);
+    await db
+      .collection(TIMBER_COLLECTION)
+      .deleteMany({ blockNumberL2: { $lte: block.blockNumberL2 } });
+  }
 }
 
 /**
