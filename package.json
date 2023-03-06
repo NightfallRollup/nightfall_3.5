@@ -27,7 +27,6 @@
     "test-x509": "LOG_LEVEL=debug npx hardhat test --bail --no-compile test/x509.test.mjs",
     "test-client-api": "npx hardhat test --bail --no-compile test/client-transaction-api.test.mjs",
     "test-periodic-payment": "npx hardhat test --bail --no-compile test/fee-and-reward-periodic-payment.test.mjs",
-    "test-tx-worker": "npx hardhat test --no-compile --bail test/tx-worker.test.mjs",
     "unit-test": "npx hardhat test --bail test/unit/SmartContracts/*",
     "unit-test-whitelist": "npx hardhat test --bail test/unit/SmartContracts/whitelist.unit.test.mjs",
     "unit-test-x509": "npx hardhat test --bail test/unit/SmartContracts/x509.unit.test.mjs",
