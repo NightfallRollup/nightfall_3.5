@@ -13,7 +13,6 @@ mumbai/
 wallet/build
 wallet/cli
 __pycache__
-test/workers/optimist-tx-workers
 test/adversary/lazy-optimist
 test/adversary/bad-client
 test/adversary/adversary-cli
