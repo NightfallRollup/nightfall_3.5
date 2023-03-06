@@ -4,7 +4,6 @@ import config from 'config';
 import {
   submitTransactionEnable,
   submitTransaction,
-  workerEnableSet,
   workerEnableGet,
 } from '../event-handlers/transaction-submitted.mjs';
 
@@ -21,15 +20,6 @@ router.get('/counters', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
-
-/**
- * Enable/Disable tx workers
- */
-router.post('/tx-worker-enable', async (req, res) => {
-  const { enable } = req.body;
-  workerEnableSet(enable);
-  res.sendStatus(200);
 });
 
 /**

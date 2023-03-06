@@ -10,6 +10,7 @@ import {
   getContractAddress,
   getContractAbi,
   debug,
+  workers,
 } from './routes/index.mjs';
 
 const app = express();
@@ -24,6 +25,7 @@ setupHttpDefaults(
     app.use('/contract-address', getContractAddress);
     app.use('/contract-abi', getContractAbi);
     app.use('/debug', debug);
+    app.use('/workers', workers);
   },
   true,
   false,

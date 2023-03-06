@@ -159,7 +159,7 @@ describe('Tx worker test', () => {
      */
     it('Initialize tx worker', async function () {
       // enable workers
-      await axios.post(`${environment.optimistApiUrl}/debug/tx-worker-enable`, {
+      await axios.post(`${environment.optimistApiUrl}/workers/transaction-worker-enable`, {
         enable: true,
       });
       // disable worker processing and store transactions in tmp collection
@@ -211,7 +211,7 @@ describe('Tx worker test', () => {
       const blockTimestamp = [];
       let startTime;
       // enable workers
-      await axios.post(`${environment.optimistApiUrl}/debug/tx-worker-enable`, {
+      await axios.post(`${environment.optimistApiUrl}/workers/transaction-worker-enable`, {
         enable: true,
       });
       txPerSecondWorkersOn = await generateNTransactions();
@@ -237,7 +237,7 @@ describe('Tx worker test', () => {
       const blockTimestamp = [];
       let startTime;
       // disable workers
-      await axios.post(`${environment.optimistApiUrl}/debug/tx-worker-enable`, {
+      await axios.post(`${environment.optimistApiUrl}/workers/transaction-worker-enable`, {
         enable: false,
       });
       const txPerSecond = await generateNTransactions();
