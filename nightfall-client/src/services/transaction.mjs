@@ -2,12 +2,21 @@
 
 import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
+import constants from '@polygon-nightfall/common-files/constants/index.mjs';
+import gen from 'general-number';
 import getProposers from '@polygon-nightfall/common-files/utils/proposer.mjs';
 import NotFoundError from '@polygon-nightfall/common-files/utils/not-found-error.mjs';
 import ValidationError from '@polygon-nightfall/common-files/utils/validation-error.mjs';
+import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
+
+const { generalise } = gen;
+
+const { SHIELD_CONTRACT_NAME } = constants;
 
 const STATUS_MINED = 'mined';
 const STATUS_MEMPOOL = 'mempool';
+
+let feeL2TokenAddress = null;
 
 export async function findTransactionInMempools(l2TransactionHash) {
   logger.debug('Get all registered proposer URLs from State contract..');
@@ -45,4 +54,14 @@ export function setL2TransactionStatus(transaction) {
   }
 
   return status;
+}
+
+export async function feeL2TokenAddressGet() {
+  if (feeL2TokenAddress === null) {
+    const shieldContractInstance = await waitForContract(SHIELD_CONTRACT_NAME);
+    feeL2TokenAddress = generalise(
+      (await shieldContractInstance.methods.getFeeL2TokenAddress().call()).toLowerCase(),
+    );
+  }
+  return feeL2TokenAddress;
 }

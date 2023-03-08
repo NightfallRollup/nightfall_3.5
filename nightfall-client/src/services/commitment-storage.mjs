@@ -8,6 +8,7 @@ import { Mutex } from 'async-mutex';
 import gen from 'general-number';
 import mongo from '@polygon-nightfall/common-files/utils/mongo.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
+import axios from 'axios';
 import { Commitment, Nullifier } from '../classes/index.mjs';
 // eslint-disable-next-line import/no-cycle
 import { isValidWithdrawal } from './valid-withdrawal.mjs';
@@ -17,10 +18,26 @@ import {
   getTransactionHashSiblingInfo,
 } from './database.mjs';
 import { syncState } from './state-sync.mjs';
+import ClusterMutex from './mutex.mjs';
 
 const { MONGO_URL, COMMITMENTS_DB, COMMITMENTS_COLLECTION } = config;
-const { generalise } = gen;
+const { generalise, GN } = gen;
 const mutex = new Mutex();
+const clusterMutex = new ClusterMutex(3000);
+
+export async function lockUsableCommitments(compressedZkpPublicKey) {
+  console.log("LOCK COMMITMIST", compressedZkpPublicKey)
+  const lockReceipt = await clusterMutex.lock(compressedZkpPublicKey);
+  console.log("LOCK COMMITMIST", compressedZkpPublicKey, lockReceipt)
+  return lockReceipt;
+}
+
+export function releaseUsableCommitments(compressedZkpPublicKey, lockReceipt) {
+  console.log("RELEASE COMMITMIST", compressedZkpPublicKey, lockReceipt)
+  const res = clusterMutex.release(compressedZkpPublicKey, lockReceipt);
+  console.log("RELEASE COMMITMIST", res);
+  return res;
+}
 
 // function to format a commitment for a mongo db and store it
 export async function storeCommitment(_commitment, nullifierKey) {
@@ -886,7 +903,7 @@ function selectCommitments(commitments, value, minC, maxC) {
   return rankedSubsetCommitmentsArray.length > 0 ? rankedSubsetCommitmentsArray[0] : [];
 }
 
-async function findUsableCommitments(
+export async function findUsableCommitments(
   compressedZkpPublicKey,
   ercAddress,
   _tokenId,
@@ -960,18 +977,24 @@ export async function findUsableCommitmentsMutex(
   maxNullifiers,
   maxNonFeeNullifiers,
 ) {
-  return mutex.runExclusive(async () =>
-    findUsableCommitments(
-      compressedZkpPublicKey,
-      ercAddress,
-      tokenId,
-      ercAddressFee,
-      _value,
-      _fee,
-      maxNullifiers,
-      maxNonFeeNullifiers,
-    ),
+  console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXX 1234',compressedZkpPublicKey.limbs(32)[0]);
+  const res = await axios.post('http://client/mutex/lock-commitments', { compressedZkpPublicKey: compressedZkpPublicKey.limbs(32)[0] });
+  logger.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXX LOCK', res.data.lockReceipt);
+  const usableCommitments = findUsableCommitments(
+    compressedZkpPublicKey,
+    ercAddress,
+    tokenId,
+    ercAddressFee,
+    _value,
+    _fee,
+    maxNullifiers,
+    maxNonFeeNullifiers,
   );
+  axios.post('http://client/mutex/release-commitments', {
+    compressedZkpPublicKey: compressedZkpPublicKey.limbs(32)[0],
+    lockReceipt: res.data.lockReceipt,
+  });
+  return usableCommitments;
 }
 
 /**

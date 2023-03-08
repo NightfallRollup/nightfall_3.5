@@ -84,6 +84,14 @@ module.exports = {
   PROTOCOL: process.env.PROTOCOL || 'http://', // connect to circom worker microservice like this
   WEBSOCKET_PORT: process.env.WEBSOCKET_PORT || 8080,
   WEBSOCKET_PING_TIME: 15000,
+  CLIENT_TX_WORKER_PARAMS: {
+    clientTxWorkerCount: process.env.CLIENT_TX_WORKER_COUNT || 100,
+    clientTxWorkerUrl: process.env.CLIENT_TX_WORKER_URL || 'http://worker',
+  },
+  CIRCOM_WORKER_PARAMS: {
+    circomWorkerCount: process.env.CIRCOM_WORKER_COUNT || 100,
+    circomWorkerUrl: `http://process.env.CIRCOM_WORKER_HOST` || 'http://worker',
+  },
   CIRCOM_WORKER_HOST: process.env.CIRCOM_WORKER_HOST || 'worker',
   DEPLOY_MOCKED_SANCTIONS_CONTRACT: process.env.DEPLOY_MOCKED_SANCTIONS_CONTRACT,
   FEE_L2_TOKEN_ID: process.env.FEE_L2_TOKEN_ID || 'MATIC',

@@ -522,7 +522,7 @@ class Nf3 {
     fee = this.defaultFeeTokenValue,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`${this.clientBaseUrl}/tokenise`, {
+    const res = await axios.post(`http://localhost:3010/tokenise`, {
       ercAddress,
       tokenId,
       salt,
@@ -556,7 +556,7 @@ class Nf3 {
     providedCommitments,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`${this.clientBaseUrl}/burn`, {
+    const res = await axios.post(`http://localhost:3010/burn`, {
       ercAddress,
       tokenId,
       value,
@@ -595,7 +595,7 @@ class Nf3 {
     @returns {Promise} Resolves into the Ethereum transaction receipt.
     */
   async transform(inputTokens, outputTokens, fee = this.defaultFeeTokenValue) {
-    const res = await axios.post(`${this.clientBaseUrl}/transform`, {
+    const res = await axios.post(`http://localhost:3010/transform`, {
       rootKey: this.zkpKeys.rootKey,
       inputTokens,
       outputTokens,
@@ -655,7 +655,8 @@ class Nf3 {
         return this.submitTransaction(txDataToSign, ercAddress, 0);
       });
     }
-    const res = await axios.post(`${this.clientBaseUrl}/deposit`, {
+    console.log('NEW DEPOSIT REQUESTED');
+    const res = await axios.post(`http://localhost:3010/deposit`, {
       ercAddress,
       tokenId,
       tokenType,
@@ -665,6 +666,7 @@ class Nf3 {
       providedCommitmentsFee,
       salt,
     });
+    console.log('NEW DEPOSIT REQUESTED DONE');
 
     if (res.data.error) {
       throw new Error(res.data.error);
@@ -715,7 +717,8 @@ class Nf3 {
     providedCommitments,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`${this.clientBaseUrl}/transfer`, {
+    console.log('NEW TRANSFER REQUESTED');
+    const res = await axios.post(`http://localhost:3010/transfer`, {
       offchain,
       ercAddress,
       tokenId,
@@ -728,6 +731,7 @@ class Nf3 {
       providedCommitments,
       providedCommitmentsFee,
     });
+    console.log('NEW TRANSFER DONE');
 
     if (res.data.error) {
       throw new Error(res.data.error);
@@ -782,7 +786,7 @@ class Nf3 {
     providedCommitments,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`${this.clientBaseUrl}/withdraw`, {
+    const res = await axios.post(`http://localhost:3010/withdraw`, {
       offchain,
       ercAddress,
       tokenId,
@@ -1434,7 +1438,8 @@ class Nf3 {
     value of each propery is the number of tokens originating from that contract.
     */
   async getLayer2Balances({ ercList } = {}) {
-    const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
+    //const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
+    const res = await axios.get(`http://localhost:3010/commitment/balance`, {
       params: {
         compressedZkpPublicKey: this.zkpKeys.compressedZkpPublicKey,
         ercList,
@@ -1444,7 +1449,8 @@ class Nf3 {
   }
 
   async getLayer2BalancesUnfiltered({ ercList } = {}) {
-    const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
+    //const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
+    const res = await axios.get(`http://localhost:3010/commitment/balance`, {
       params: {
         compressedZkpPublicKey: ercList,
       },
@@ -1464,7 +1470,7 @@ class Nf3 {
     value of each propery is the number of tokens pending deposit from that contract.
     */
   async getLayer2PendingDepositBalances(ercList, filterByCompressedZkpPublicKey) {
-    const res = await axios.get(`${this.clientBaseUrl}/commitment/pending-deposit`, {
+    const res = await axios.get(`http://localhost:3010/commitment/pending-deposit`, {
       params: {
         compressedZkpPublicKey:
           filterByCompressedZkpPublicKey === true ? this.zkpKeys.compressedZkpPublicKey : null,
@@ -1487,7 +1493,7 @@ class Nf3 {
     from that contract.
     */
   async getLayer2PendingSpentBalances(ercList, filterByCompressedZkpPublicKey) {
-    const res = await axios.get(`${this.clientBaseUrl}/commitment/pending-spent`, {
+    const res = await axios.get(`http://localhost:3010/commitment/pending-spent`, {
       params: {
         compressedZkpPublicKey:
           filterByCompressedZkpPublicKey === true ? this.zkpKeys.compressedZkpPublicKey : null,
@@ -1508,7 +1514,7 @@ class Nf3 {
     value of each propery is an array of commitments originating from that contract.
     */
   async getLayer2Commitments(ercList, filterByCompressedZkpPublicKey) {
-    const res = await axios.get(`${this.clientBaseUrl}/commitment/commitments`, {
+    const res = await axios.get(`http://localhost:3010/commitment/commitments`, {
       params: {
         compressedZkpPublicKey:
           filterByCompressedZkpPublicKey === true ? [this.zkpKeys.compressedZkpPublicKey] : [],
@@ -1527,7 +1533,7 @@ class Nf3 {
     value of each propery is an array of withdraw commitments originating from that contract.
     */
   async getPendingWithdraws() {
-    const res = await axios.get(`${this.clientBaseUrl}/commitment/withdraws`);
+    const res = await axios.get(`http://localhost:3010/commitment/withdraws`);
     return res.data.commitments;
   }
 
@@ -1740,7 +1746,7 @@ class Nf3 {
    * @throws 404 tx not found, 400 tx is incorrect
    */
   async getL2TransactionStatus(l2TransactionHash) {
-    return axios.get(`${this.clientBaseUrl}/transaction/status/${l2TransactionHash}`);
+    return axios.get(`http://localhost:3010/transaction/status/${l2TransactionHash}`);
   }
 
   /**

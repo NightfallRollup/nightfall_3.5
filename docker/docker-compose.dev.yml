@@ -38,6 +38,22 @@ services:
       - 9239:9229
     command: ['npm', 'run', 'dev']
 
+  client-txw:
+    build:
+      dockerfile: docker/client-tx-worker.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-client/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /config/default.js
+    command: ['npm', 'run', 'dev-tx-worker']
+
   deployer:
     build:
       dockerfile: docker/deployer.Dockerfile
