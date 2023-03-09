@@ -3,7 +3,6 @@
  */
 
 import express from 'express';
-import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import {
   lockUsableCommitments,
   releaseUsableCommitments,
@@ -12,14 +11,12 @@ import {
 const router = express.Router();
 
 /**
- * @description Lock common resource
+ * @description Lock usable commitments
  */
 router.post('/lock-commitments', async (req, res, next) => {
   const { compressedZkpPublicKey } = req.body;
-  logger.info(`RECEIVED LOCK ${compressedZkpPublicKey}`);
   try {
     const lockReceipt = await lockUsableCommitments(compressedZkpPublicKey);
-    logger.info(`LOCK RECEIPT ${lockReceipt}`);
     res.json({ lockReceipt });
   } catch (err) {
     next(err);
@@ -27,15 +24,13 @@ router.post('/lock-commitments', async (req, res, next) => {
 });
 
 /**
- * @description Unlock common resource
+ * @description Unlock usable commitments
  */
 router.post('/release-commitments', async (req, res, next) => {
   const { compressedZkpPublicKey, lockReceipt } = req.body;
   try {
-    logger.info(`RECEIVED RELEASE ${compressedZkpPublicKey}, ${lockReceipt}`);
     const release = releaseUsableCommitments(compressedZkpPublicKey, lockReceipt);
     res.json({ release });
-    logger.info(`RELEASE RECEIPT ${release}`);
   } catch (err) {
     next(err);
   }

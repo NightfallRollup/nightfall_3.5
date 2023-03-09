@@ -23,7 +23,7 @@ import { checkTransaction } from './transaction-checker.mjs';
 import { workerEnableGet } from '../event-handlers/transaction-submitted.mjs';
 
 const { ZERO } = constants;
-const { txWorkerUrl, FULL_VERIFICATION_SELF_PROPOSED_BLOCKS } = config.TX_WORKER_PARAMS;
+const { optimistTxWorkerUrl, FULL_VERIFICATION_SELF_PROPOSED_BLOCKS } = config.OPTIMIST_TX_WORKER_PARAMS;
 
 /**
  * Check that the leafCount is correct
@@ -357,7 +357,7 @@ async function dispatchTransactions(block, transactions) {
       const transactionStatus = (
         await Promise.all(
           transactions.map(transaction =>
-            axios.post(`${txWorkerUrl}/workers/check-transaction`, {
+            axios.post(`${optimistTxWorkerUrl}/workers/check-transaction`, {
               transaction,
               checkDuplicatesInL2: true,
               checkDuplicatesInMempool: true,

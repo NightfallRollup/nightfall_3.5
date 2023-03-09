@@ -7,6 +7,6 @@ then
 fi
 
 # Launch Transaction Submitted Workers
-if [ "${TX_WORKER_COUNT}" ]; then
+if [ "${OPTIMIST_TX_WORKER_COUNT}" ]; then
   exec "$@"
 fi

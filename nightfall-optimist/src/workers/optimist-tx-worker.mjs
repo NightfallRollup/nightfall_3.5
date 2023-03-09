@@ -33,12 +33,12 @@ import {
 
 import { checkTransaction } from '../services/transaction-checker.mjs';
 
-const { txWorkerCount } = config.TX_WORKER_PARAMS;
+const { optimistTxWorkerCount } = config.OPTIMIST_TX_WORKER_PARAMS;
 const { STATE_CONTRACT_NAME } = constants;
 
 async function initWorkers() {
   if (cluster.isPrimary) {
-    const totalCPUs = Math.min(os.cpus().length - 1, Number(txWorkerCount));
+    const totalCPUs = Math.min(os.cpus().length - 1, Number(optimistTxWorkerCount));
 
     logger.info(`Number of CPUs is ${totalCPUs}`);
 

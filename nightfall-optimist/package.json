@@ -5,8 +5,8 @@
   "main": "index.mjs",
   "scripts": {
     "start": "node src/index.mjs",
-    "start-tx-submitted": "node src/workers/transaction-submitted-app.mjs",
-    "dev-tx-submitted": "nodemon src/workers/transaction-submitted-app.mjs",
+    "start-tx-submitted-worker": "node src/workers/optimist-tx-worker.mjs",
+    "dev-tx-submitted-worker": "nodemon src/workers/optimist-tx-worker.mjs",
     "start:debug": "node --inspect=0.0.0.0:9229 src/index.mjs",
     "dev": "nodemon src/index.mjs"
   },

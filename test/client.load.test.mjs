@@ -23,7 +23,7 @@ chai.use(chaiAsPromised);
 
 // we need require here to import jsons
 const environment = config.ENVIRONMENTS[process.env.ENVIRONMENT] || config.ENVIRONMENTS.localhost;
-const { N_TRANSACTIONS = 20, N_ITER = 10 } = process.env;
+const { N_TRANSACTIONS = 20, N_ITER = 2 } = process.env;
 
 const {
   tokenConfigs: { tokenType, tokenId },

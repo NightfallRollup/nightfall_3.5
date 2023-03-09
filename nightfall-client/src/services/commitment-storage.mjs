@@ -20,20 +20,18 @@ import { syncState } from './state-sync.mjs';
 import ClusterMutex from './mutex.mjs';
 
 const { MONGO_URL, COMMITMENTS_DB, COMMITMENTS_COLLECTION } = config;
+const { clientUrl } = config.CLIENT_TX_WORKER_PARAMS;
+
 const { generalise } = gen;
 const clusterMutex = new ClusterMutex(3000);
 
 export async function lockUsableCommitments(compressedZkpPublicKey) {
-  console.log('LOCK COMMITMIST', compressedZkpPublicKey);
   const lockReceipt = await clusterMutex.lock(compressedZkpPublicKey);
-  console.log('LOCK COMMITMIST', compressedZkpPublicKey, lockReceipt);
   return lockReceipt;
 }
 
 export function releaseUsableCommitments(compressedZkpPublicKey, lockReceipt) {
-  console.log('RELEASE COMMITMIST', compressedZkpPublicKey, lockReceipt);
   const res = clusterMutex.release(compressedZkpPublicKey, lockReceipt);
-  console.log('RELEASE COMMITMIST', res);
   return res;
 }
 
@@ -999,11 +997,10 @@ export async function findUsableCommitmentsMutex(
   maxNullifiers,
   maxNonFeeNullifiers,
 ) {
-  console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXX 1234', compressedZkpPublicKey.limbs(32)[0]);
-  const res = await axios.post('http://client/mutex/lock-commitments', {
-    compressedZkpPublicKey: compressedZkpPublicKey.limbs(32)[0],
+  const userIndex = compressedZkpPublicKey.limbs(32)[0];
+  const res = await axios.post(`${clientUrl}/mutex/lock-commitments`, {
+    compressedZkpPublicKey: userIndex,
   });
-  logger.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXX LOCK', res.data.lockReceipt);
   const usableCommitments = findUsableCommitments(
     compressedZkpPublicKey,
     ercAddress,
@@ -1014,8 +1011,8 @@ export async function findUsableCommitmentsMutex(
     maxNullifiers,
     maxNonFeeNullifiers,
   );
-  axios.post('http://client/mutex/release-commitments', {
-    compressedZkpPublicKey: compressedZkpPublicKey.limbs(32)[0],
+  axios.post(`${clientUrl}/mutex/release-commitments`, {
+    compressedZkpPublicKey: userIndex,
     lockReceipt: res.data.lockReceipt,
   });
   return usableCommitments;

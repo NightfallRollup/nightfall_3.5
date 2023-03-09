@@ -66,9 +66,18 @@ module.exports = {
   CONTRACT_ARTIFACTS: process.env.CONTRACT_ARTIFACTS || '/app/build/contracts',
   EXCLUDE_DIRS: 'common',
   MAX_QUEUE: 10,
-  TX_WORKER_PARAMS: {
-    txWorkerCount: process.env.TX_WORKER_COUNT || 100,
-    txWorkerUrl: process.env.TX_WORKER_URL || 'http://opt-txw',
+  OPTIMIST_TX_WORKER_PARAMS: {
+    optimistTxWorkerCount: process.env.OPTIMIST_TX_WORKER_COUNT || 2,
+    optimistTxWorkerUrl: process.env.OPTIMIST_TX_WORKER_URL || 'http://opt-txw',
+  },
+  CLIENT_TX_WORKER_PARAMS: {
+    clientTxWorkerCount: process.env.CLIENT_TX_WORKER_COUNT || 2,
+    clientTxWorkerUrl: process.env.CLIENT_TX_WORKER_URL || 'http://client-txw',
+    clientUrl: process.env.CLIENT_URL || 'http://client',
+  },
+  CIRCOM_WORKER_PARAMS: {
+    circomWorkerCount: process.env.CIRCOM_WORKER_COUNT || 2,
+    circomWorkerUrl: `http://${process.env.CIRCOM_WORKER_HOST}` || 'http://worker',
   },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,
@@ -89,14 +98,6 @@ module.exports = {
   PROTOCOL: process.env.PROTOCOL || 'http://', // connect to circom worker microservice like this
   WEBSOCKET_PORT: process.env.WEBSOCKET_PORT || 8080,
   WEBSOCKET_PING_TIME: 15000,
-  CLIENT_TX_WORKER_PARAMS: {
-    clientTxWorkerCount: process.env.CLIENT_TX_WORKER_COUNT || 100,
-    clientTxWorkerUrl: process.env.CLIENT_TX_WORKER_URL || 'http://worker',
-  },
-  CIRCOM_WORKER_PARAMS: {
-    circomWorkerCount: process.env.CIRCOM_WORKER_COUNT || 100,
-    circomWorkerUrl: `http://process.env.CIRCOM_WORKER_HOST` || 'http://worker',
-  },
   CIRCOM_WORKER_HOST: process.env.CIRCOM_WORKER_HOST || 'worker',
   DEPLOY_MOCKED_SANCTIONS_CONTRACT: process.env.DEPLOY_MOCKED_SANCTIONS_CONTRACT,
   FEE_L2_TOKEN_ID: process.env.FEE_L2_TOKEN_ID || 'MATIC',
@@ -252,6 +253,8 @@ module.exports = {
       clientApiUrl: process.env.CLIENT_HOST
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
+      clientApiTxUrl: 'http://localhost:3010',
+      clientApiVkUrl: 'http://localhost:3020',
       optimistApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',

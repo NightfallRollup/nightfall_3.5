@@ -102,6 +102,7 @@ services:
       STATE_GENESIS_BLOCK: ${STATE_GENESIS_BLOCK:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       CLIENT_TX_WORKER_COUNT: ${CLIENT_TX_WORKER_COUNT:-2}
+      CLIENT_URL: ${CLIENT_URL:-http://client}
     command: ['npm', 'run', 'dev-tx-worker']
 
   client-bpw:
@@ -269,8 +270,8 @@ services:
       MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://mongodb:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted']
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   rabbitmq:
     image: rabbitmq

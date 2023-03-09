@@ -247,8 +247,8 @@ services:
       MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://optimist_mongodb_1:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted']
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   proposer_optimist_2:
     build:
@@ -324,8 +324,8 @@ services:
       MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://optimist_mongodb_2:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted']
+      OPTMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   optimist_mongodb_1:
     image: mongo:4.4.1-bionic

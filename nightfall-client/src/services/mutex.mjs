@@ -12,7 +12,9 @@ import { Mutex } from 'async-mutex';
 
 // Maximum number of mutexes that can be created
 const MAX_N_MUTEX = 1024;
+// Maximum time in ms lock can be acquired. After this time, lock will be released.
 const MAX_TIMEOUT = 1000;
+// Maximum reservation number
 const MAX_RESERVE = 4294967296;
 
 class ClusterMutex {

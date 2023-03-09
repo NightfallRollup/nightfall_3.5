@@ -45,7 +45,6 @@ function createQueue(options) {
 // TODO when SDK is refactored such that these functions are split by user, proposer and challenger,
 // then there will only be one queue here. The constructor does not need to initialise clientBaseUrl
 // for proposer/liquidityProvider/challenger and optimistBaseUrl, optimistWsUrl for a user etc
-//const userQueue = createQueue({ autostart: true, concurrency: 1 });
 const userQueue = createQueue({ autostart: true });
 const proposerQueue = createQueue({ autostart: true });
 const challengerQueue = createQueue({ autostart: true, concurrency: 1 });
@@ -55,8 +54,9 @@ const liquidityProviderQueue = createQueue({ autostart: true, concurrency: 1 });
 @class
 Creates a new Nightfall_3 library instance.
 @param {string} clientBaseUrl - The base url for nightfall-client
+@param {string} clientBaseTxUrl - The base url for nightfall-client Transactions and commitments API
+@param {string} clientBaseVkUrl - The base url for nightfall-client Viewing Key API
 @param {string} optimistBaseUrl - The base url for nightfall-optimist
-@param {string} optimistTxWorkerBaseUrl - The base url for nightfall-optimist Tx worker
 @param {string} optimistWsUrl - The webscocket url for nightfall-optimist
 @param {string} web3WsUrl - The websocket url for the web3js client
 @param {string} ethereumSigningKey - the Ethereum siging key to be used for transactions (hex string).
@@ -66,8 +66,6 @@ class Nf3 {
   clientBaseUrl;
 
   optimistBaseUrl;
-
-  optimistTxWorkerBaseUrl;
 
   optimistWsUrl;
 
@@ -113,8 +111,6 @@ class Nf3 {
 
   clientAuthenticationKey;
 
-  nDeposits = 0;
-
   // min fee or reward one should hold for withdaw
   // in State contract.
   minL1Balance = DEFAULT_MIN_L1_WITHDRAW;
@@ -127,6 +123,8 @@ class Nf3 {
     ethereumSigningKey,
     environment = {
       clientApiUrl: 'http://localhost:8080',
+      clientApiTxUrl: 'http://localhost:3010',
+      clientApiVkUrl: 'http://localhost:3020',
       optimistApiUrl: 'http://localhost:8081',
       optimistWsUrl: 'ws://localhost:8082',
       web3WsUrl: 'ws://localhost:8546',
@@ -135,8 +133,9 @@ class Nf3 {
     clientApiAuthenticationKey,
   ) {
     this.clientBaseUrl = environment.clientApiUrl;
+    this.clientBaseTxUrl = environment.clientApiTxUrl;
+    this.clientBaseVkUrl = environment.clientApiVkUrl;
     this.optimistBaseUrl = environment.optimistApiUrl;
-    this.optimistTxWorkerBaseUrl = environment.optimistTxWorkerApiUrl;
     this.optimistWsUrl = environment.optimistWsUrl;
     this.web3WsUrl = environment.web3WsUrl;
     this.ethereumSigningKey = ethereumSigningKey;
@@ -529,7 +528,7 @@ class Nf3 {
     fee = this.defaultFeeTokenValue,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`http://localhost:3010/tokenise`, {
+    const res = await axios.post(`${this.clientBaseTxUrl}/tokenise`, {
       ercAddress,
       tokenId,
       salt,
@@ -563,7 +562,7 @@ class Nf3 {
     providedCommitments,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`http://localhost:3010/burn`, {
+    const res = await axios.post(`${this.clientBaseTxUrl}/burn`, {
       ercAddress,
       tokenId,
       value,
@@ -602,7 +601,7 @@ class Nf3 {
     @returns {Promise} Resolves into the Ethereum transaction receipt.
     */
   async transform(inputTokens, outputTokens, fee = this.defaultFeeTokenValue) {
-    const res = await axios.post(`http://localhost:3010/transform`, {
+    const res = await axios.post(`${this.clientBaseTxUrl}/transform`, {
       rootKey: this.zkpKeys.rootKey,
       inputTokens,
       outputTokens,
@@ -662,8 +661,7 @@ class Nf3 {
         return this.submitTransaction(txDataToSign, ercAddress, 0);
       });
     }
-    console.log('NEW DEPOSIT REQUESTED');
-    const res = await axios.post(`http://localhost:3010/deposit`, {
+    const res = await axios.post(`${this.clientBaseTxUrl}/deposit`, {
       ercAddress,
       tokenId,
       tokenType,
@@ -673,7 +671,6 @@ class Nf3 {
       providedCommitmentsFee,
       salt,
     });
-    console.log('NEW DEPOSIT REQUESTED DONE', this.nDeposits++);
 
     if (res.data.error) {
       throw new Error(res.data.error);
@@ -724,8 +721,7 @@ class Nf3 {
     providedCommitments,
     providedCommitmentsFee,
   ) {
-    console.log('NEW TRANSFER REQUESTED');
-    const res = await axios.post(`http://localhost:3010/transfer`, {
+    const res = await axios.post(`${this.clientBaseTxUrl}/transfer`, {
       offchain,
       ercAddress,
       tokenId,
@@ -738,7 +734,6 @@ class Nf3 {
       providedCommitments,
       providedCommitmentsFee,
     });
-    console.log('NEW TRANSFER DONE');
 
     if (res.data.error) {
       throw new Error(res.data.error);
@@ -794,7 +789,7 @@ class Nf3 {
     providedCommitments,
     providedCommitmentsFee,
   ) {
-    const res = await axios.post(`http://localhost:3010/withdraw`, {
+    const res = await axios.post(`${this.clientBaseTxUrl}/withdraw`, {
       offchain,
       ercAddress,
       tokenId,
@@ -964,7 +959,7 @@ class Nf3 {
     with the makeKeys function).
     */
   async subscribeToIncomingViewingKeys() {
-    return axios.post(`http://localhost:3020/incoming-viewing-key`, {
+    return axios.post(`${this.clientBaseVkUrl}/incoming-viewing-key`, {
       zkpPrivateKeys: [this.zkpKeys.zkpPrivateKey],
       nullifierKeys: [this.zkpKeys.nullifierKey],
     });
@@ -1446,8 +1441,7 @@ class Nf3 {
     value of each propery is the number of tokens originating from that contract.
     */
   async getLayer2Balances({ ercList } = {}) {
-    // const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
-    const res = await axios.get(`http://localhost:3010/commitment/balance`, {
+    const res = await axios.get(`${this.clientBaseTxUrl}/commitment/balance`, {
       params: {
         compressedZkpPublicKey: this.zkpKeys.compressedZkpPublicKey,
         ercList,
@@ -1457,8 +1451,7 @@ class Nf3 {
   }
 
   async getLayer2BalancesUnfiltered({ ercList } = {}) {
-    // const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
-    const res = await axios.get(`http://localhost:3010/commitment/balance`, {
+    const res = await axios.get(`${this.clientBaseTxUrl}/commitment/balance`, {
       params: {
         compressedZkpPublicKey: ercList,
       },
@@ -1478,7 +1471,7 @@ class Nf3 {
     value of each propery is the number of tokens pending deposit from that contract.
     */
   async getLayer2PendingDepositBalances(ercList, filterByCompressedZkpPublicKey) {
-    const res = await axios.get(`http://localhost:3010/commitment/pending-deposit`, {
+    const res = await axios.get(`${this.clientBaseTxUrl}/commitment/pending-deposit`, {
       params: {
         compressedZkpPublicKey:
           filterByCompressedZkpPublicKey === true ? this.zkpKeys.compressedZkpPublicKey : null,
@@ -1501,7 +1494,7 @@ class Nf3 {
     from that contract.
     */
   async getLayer2PendingSpentBalances(ercList, filterByCompressedZkpPublicKey) {
-    const res = await axios.get(`http://localhost:3010/commitment/pending-spent`, {
+    const res = await axios.get(`${this.clientBaseTxUrl}/commitment/pending-spent`, {
       params: {
         compressedZkpPublicKey:
           filterByCompressedZkpPublicKey === true ? this.zkpKeys.compressedZkpPublicKey : null,
@@ -1522,7 +1515,7 @@ class Nf3 {
     value of each propery is an array of commitments originating from that contract.
     */
   async getLayer2Commitments(ercList, filterByCompressedZkpPublicKey) {
-    const res = await axios.get(`http://localhost:3010/commitment/commitments`, {
+    const res = await axios.get(`${this.clientBaseTxUrl}/commitment/commitments`, {
       params: {
         compressedZkpPublicKey:
           filterByCompressedZkpPublicKey === true ? [this.zkpKeys.compressedZkpPublicKey] : [],
@@ -1541,7 +1534,7 @@ class Nf3 {
     value of each propery is an array of withdraw commitments originating from that contract.
     */
   async getPendingWithdraws() {
-    const res = await axios.get(`http://localhost:3010/commitment/withdraws`);
+    const res = await axios.get(`${this.clientBaseTxUrl}/commitment/withdraws`);
     return res.data.commitments;
   }
 
@@ -1754,7 +1747,7 @@ class Nf3 {
    * @throws 404 tx not found, 400 tx is incorrect
    */
   async getL2TransactionStatus(l2TransactionHash) {
-    return axios.get(`http://localhost:3010/transaction/status/${l2TransactionHash}`);
+    return axios.get(`${this.clientBaseTxUrl}/transaction/status/${l2TransactionHash}`);
   }
 
   /**

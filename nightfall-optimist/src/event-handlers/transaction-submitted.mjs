@@ -16,7 +16,7 @@ import { getTransactionSubmittedCalldata } from '../services/process-calldata.mj
 
 const { STATE_CONTRACT_NAME } = constants;
 
-const { txWorkerUrl } = config.TX_WORKER_PARAMS;
+const { optimistTxWorkerUrl } = config.OPTIMIST_TX_WORKER_PARAMS;
 
 // Flag to enable/disable worker processing
 //  When disabled, workers are stopped. Workers are
@@ -105,11 +105,11 @@ export async function transactionSubmittedEventHandler(eventParams) {
   // If TX WORKERS enabled or not responsive, route transaction requests to main thread
   if (_workerEnable) {
     axios
-      .post(`${txWorkerUrl}/workers/transaction-submitted`, {
+      .post(`${optimistTxWorkerUrl}/workers/transaction-submitted`, {
         eventParams,
       })
       .catch(function (error) {
-        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
+        logger.error(`Error submit tx worker ${error}, ${optimistTxWorkerUrl}`);
         submitTransaction(eventParams);
       });
   } else {
