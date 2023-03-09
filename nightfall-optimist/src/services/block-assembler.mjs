@@ -66,6 +66,40 @@ async function makeBlock(proposer, transactions) {
   return Block.build({ proposer, transactions });
 }
 
+// Wrapper function that controls how block is sent to Proposer so that it signs it
+async function sendBlockToProposer(unsignedProposeBlockTransaction, block, transactions) {
+  let count = 0;
+  while (!ws || ws.readyState !== WebSocket.OPEN) {
+    await waitForTimeout(3000); // eslint-disable-line no-await-in-loop
+
+    logger.warn(`Websocket to proposer is closed. Waiting for proposer to reconnect`);
+
+    increaseProposerWsClosed();
+    if (count++ > 100) {
+      increaseProposerWsFailed();
+
+      logger.error(`Websocket to proposer has failed. Returning...`);
+      return;
+    }
+  }
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    await ws.send(
+      JSON.stringify({
+        type: 'block',
+        txDataToSign: unsignedProposeBlockTransaction,
+        block,
+        transactions,
+      }),
+    );
+    logger.debug('Send unsigned block-assembler transactions to ws client');
+  } else {
+    increaseProposerBlockNotSent();
+
+    if (ws) logger.debug({ msg: 'Block not sent', socketState: ws.readyState });
+    else logger.debug('Block not sent. Non-initialized socket');
+  }
+}
 /**
  * This function will make a block iff I am the proposer and there are enough
  * transactions in the database to assembke a block from. It loops until told to
@@ -187,38 +221,7 @@ export async function conditionalMakeBlock(proposer) {
 
         // check that the websocket exists (it should) and its readyState is OPEN
         // before sending Proposed block. If not wait until the proposer reconnects
-        let count = 0;
-        while (!ws || ws.readyState !== WebSocket.OPEN) {
-          await waitForTimeout(3000); // eslint-disable-line no-await-in-loop
-
-          logger.warn(`Websocket to proposer is closed. Waiting for proposer to reconnect`);
-
-          increaseProposerWsClosed();
-          if (count++ > 100) {
-            increaseProposerWsFailed();
-
-            logger.error(`Websocket to proposer has failed. Returning...`);
-            return;
-          }
-        }
-
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          await ws.send(
-            JSON.stringify({
-              type: 'block',
-              txDataToSign: unsignedProposeBlockTransaction,
-              block,
-              transactions,
-            }),
-          );
-          logger.debug('Send unsigned block-assembler transactions to ws client');
-        } else {
-          increaseProposerBlockNotSent();
-
-          if (ws) logger.debug({ msg: 'Block not sent', socketState: ws.readyState });
-          else logger.debug('Block not sent. Non-initialized socket');
-        }
-
+        await sendBlockToProposer(unsignedProposeBlockTransaction, block, transactions);
         // remove the transactions from the mempool so we don't keep making new
         // blocks with them
         await removeTransactionsFromMemPool(block.transactionHashes);

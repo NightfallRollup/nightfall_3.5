@@ -1,3 +1,4 @@
+/* ignore unused exports */
 /**
  * Functions for storing blockchain data that the optimist application needs to
  * remember wholesale because otherwise it would have to be constructed in real-
@@ -267,7 +268,12 @@ export async function deleteRegisteredProposerAddress(address) {
 export async function getAllRegisteredProposersCount() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
-  return db.collection(PROPOSER_COLLECTION).count();
+  return db.collection(PROPOSER_COLLECTION).countDocuments();
+}
+export async function getAllRegisteredProposers() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(PROPOSER_COLLECTION).find().toArray();
 }
 
 /**
@@ -304,6 +310,7 @@ export async function numberOfMempoolTransactions() {
   const db = connection.db(OPTIMIST_DB);
   return db.collection(TRANSACTIONS_COLLECTION).countDocuments({ mempool: true });
 }
+
 /**
  * Add a set of L2 transactions back to the mempool after a block has been rolled back
  */
@@ -359,6 +366,24 @@ export async function deleteDuplicateCommitmentsAndNullifiersFromMemPool(
     mempool: true,
   };
   return db.collection(TRANSACTIONS_COLLECTION).deleteMany(query);
+}
+
+export async function getTransactionByCommitment(commitmentHash) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const query = {
+    commitments: { $in: commitmentHash },
+  };
+  return db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
+}
+
+export async function getTransactionByNullifier(nullifierHash) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const query = {
+    nullifiers: { $in: nullifierHash },
+  };
+  return db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
 }
 
 /**
@@ -422,6 +447,15 @@ export async function getMempoolTransactionByNullifier(nullifierHash, transactio
   });
 }
 
+/**
+function to look a transaction by blockNumberL2
+*/
+export async function getTransactionByBlockNumberL2(blockNumberL2) {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  const query = { blockNumberL2 };
+  return db.collection(TRANSACTIONS_COLLECTION).find(query).toArray();
+}
 /**
 function to look a transaction by transactionHash, if you know the hash of the transaction.
 */
@@ -538,6 +572,11 @@ export async function resetUnsuccessfulBlockProposedTransactions() {
 /**
 Timber functions
 */
+export async function getNumberOfL2Blocks() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(TIMBER_COLLECTION).countDocuments();
+}
 
 export async function saveTree(blockNumber, blockNumberL2, timber) {
   const connection = await mongo.connection(MONGO_URL);
@@ -611,14 +650,9 @@ export async function deleteTreeByBlockNumberL2(blockNumberL2) {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
   await db.collection(TIMBER_COLLECTION).updateOne({ blockNumberL2 }, { $set: { rollback: true } });
-  await new Promise(resolve => setTimeout(() => resolve(), 1000));
+  // Allow some time for previous update to propagate via change streams to advertise a deletion
+  await new Promise(resolve => setTimeout(() => resolve(), 100));
   return db.collection(TIMBER_COLLECTION).deleteMany({ blockNumberL2: { $gte: blockNumberL2 } });
-}
-
-export async function getNumberOfL2Blocks() {
-  const connection = await mongo.connection(MONGO_URL);
-  const db = connection.db(OPTIMIST_DB);
-  return db.collection(TIMBER_COLLECTION).find().count();
 }
 
 // function to set the path of the transaction hash leaf in transaction hash timber

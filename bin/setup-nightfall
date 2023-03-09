@@ -56,3 +56,7 @@ fi
 if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"worker"* ]]; then
   docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} worker
 fi
+
+if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"opt-txw"* ]]; then
+  docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} opt-txw
+fi

@@ -400,11 +400,12 @@ export const transferNTransactions = async (
   tokenId,
   compressedZkpPublicKey,
   fee,
+  offchain = false,
 ) => {
   const transferTransactions = [];
   for (let i = 0; i < N; i++) {
     const res = await nf3.transfer(
-      false,
+      offchain,
       ercAddress,
       tokenType,
       value,
@@ -412,8 +413,10 @@ export const transferNTransactions = async (
       compressedZkpPublicKey,
       fee,
     );
-    expectTransaction(res);
-    transferTransactions.push(res);
+    if (!offchain) {
+      expectTransaction(res);
+      transferTransactions.push(res);
+    }
   }
   await new Promise(resolve => setTimeout(resolve, 6000));
 

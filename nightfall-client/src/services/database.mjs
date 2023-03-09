@@ -99,7 +99,7 @@ export async function deleteTreeByTransactionHashL1(transactionHashL1) {
 export async function getNumberOfL2Blocks() {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(COMMITMENTS_DB);
-  return db.collection(TIMBER_COLLECTION).find().count();
+  return db.collection(TIMBER_COLLECTION).countDocuments();
 }
 
 /**

@@ -54,6 +54,7 @@ module.exports = {
   PROPOSER_COLLECTION: 'proposers',
   CHALLENGER_COLLECTION: 'challengers',
   TRANSACTIONS_COLLECTION: 'transactions',
+  BUFFERED_TRANSACTIONS_COLLECTION: 'transactions_buffered',
   SUBMITTED_BLOCKS_COLLECTION: 'blocks',
   INVALID_BLOCKS_COLLECTION: 'invalid_blocks',
   COMMIT_COLLECTION: 'commits',
@@ -62,9 +63,13 @@ module.exports = {
   CIRCUIT_COLLECTION: 'circuit_storage',
   CIRCUIT_HASH_COLLECTION: 'circuit_hash_storage',
   KEYS_COLLECTION: 'keys',
-  CONTRACT_ARTIFACTS: '/app/build/contracts',
+  CONTRACT_ARTIFACTS: process.env.CONTRACT_ARTIFACTS || '/app/build/contracts',
   EXCLUDE_DIRS: 'common',
   MAX_QUEUE: 10,
+  TX_WORKER_PARAMS: {
+    txWorkerCount: process.env.TX_WORKER_COUNT || 100,
+    txWorkerUrl: process.env.TX_WORKER_URL || 'http://opt-txw',
+  },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,
   CONFIRMATION_POLL_TIME: 1000,
@@ -104,6 +109,8 @@ module.exports = {
   ENVIRONMENT: process.env.ENVIRONMENT || 'localhost',
   OPTIMIST_MONGO_URL: process.env.OPTIMIST_MONGO_URL || 'mongodb://mongodb:27017',
   IS_CHALLENGER: process.env.IS_CHALLENGER || 'true',
+  FULL_VERIFICATION_SELF_PROPOSED_BLOCKS:
+    process.env.FULL_VERIFICATION_SELF_PROPOSED_BLOCKS || 'true',
   ETH_NETWORK: process.env.ETH_NETWORK || 'blockchain',
   WHITELISTING: process.env.WHITELISTING,
   UPGRADE_CONTRACTS: process.env.UPGRADE_CONTRACTS,
@@ -209,6 +216,7 @@ module.exports = {
       chainId: 1,
       clientApiUrl: '',
       optimistApiUrl: '',
+      optimistTxWorkerApiUrl: '',
       optimistWsUrl: '',
       web3WsUrl: '',
     },
@@ -219,6 +227,9 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistTxWorkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST
@@ -244,6 +255,9 @@ module.exports = {
       optimistApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
+      optimistTxWorkerApiUrl: process.env.OPTIMIST_TX_WORKER_HOST
+        ? `http://${process.env.OPTIMIST_TX_WORKER_HOST}:${process.env.OPTIMIST_TX_WORKER_PORT}`
+        : 'http://opt-txw',
       optimistWsUrl: process.env.OPTIMIST_HOST
         ? `ws://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_WS_PORT}`
         : 'ws://localhost:8082',
@@ -277,6 +291,7 @@ module.exports = {
       chainId: 1337,
       clientApiUrl: `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`,
       optimistApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
+      optimistTxWorkerApiUrl: `https://${process.env.OPTIMIST_TX_WORKER_HOST}`,
       optimistWsUrl: `wss://${process.env.OPTIMIST_HOST}`,
       proposerBaseUrl: `https://${process.env.PROPOSER_HOST}`,
       web3WsUrl: `wss://${process.env.BLOCKCHAIN_WS_HOST}${process.env.BLOCKCHAIN_PATH}`,
@@ -294,6 +309,9 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistTxWorkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST

@@ -5,6 +5,8 @@
   "main": "index.mjs",
   "scripts": {
     "start": "node src/index.mjs",
+    "start-tx-submitted": "node src/workers/transaction-submitted-app.mjs",
+    "dev-tx-submitted": "nodemon src/workers/transaction-submitted-app.mjs",
     "start:debug": "node --inspect=0.0.0.0:9229 src/index.mjs",
     "dev": "nodemon src/index.mjs"
   },
@@ -36,6 +38,7 @@
     "config": "^3.3.1",
     "cors": "2.8.5",
     "express": "^4.17.1",
+    "ffjavascript": "^0.2.57",
     "general-number": "^1.0.1",
     "hex-to-binary": "^1.0.1",
     "jsonfile": "^6.1.0",

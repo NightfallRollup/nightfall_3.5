@@ -1,4 +1,5 @@
 import express from 'express';
+
 import { getDebugCounters } from '../services/debug-counters.mjs';
 
 const router = express.Router();

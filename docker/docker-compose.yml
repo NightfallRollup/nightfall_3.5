@@ -187,7 +187,8 @@ services:
       USDC_RESTRICT: ${USDC_RESTRICT}
       UPGRADE: ${UPGRADE_CONTRACTS}
       WHITELISTING: ${WHITELISTING}
-      WETH_RESTRICT: ${WETH_RESTRICT}
+      WETH_RESTRICT: ${WETH_RESTRICT} 
+      PARALLEL_SETUP: ${PARALLEL_SETUP-true}
 
   hosted-utils-api-server:
     build:
@@ -228,6 +229,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-localhost}
       HASH_TYPE: poseidon
       IS_CHALLENGER: ${IS_CHALLENGER:-true}
+      FULL_VERIFICATION_SELF_PROPOSED_BLOCKS: ${FULL_VERIFICATION_SELF_PROPOSED_BLOCKS:-true}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
       LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
       LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
@@ -236,7 +238,39 @@ services:
       PROPOSER_MAX_BLOCK_PERIOD_MILIS: ${PROPOSER_MAX_BLOCK_PERIOD_MILIS:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw}
     command: ['npm', 'run', 'dev']
+
+  opt-txw:
+    build:
+      dockerfile: docker/opt_txw.Dockerfile
+      context: ..
+    image: opt-txw:latest
+    depends_on:
+      - mongodb
+    networks:
+      - nightfall_network
+    ports:
+      - 3000:80
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build/
+    environment:
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      HASH_TYPE: poseidon
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://mongodb:27017}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
+    command: ['npm', 'run', 'dev-tx-submitted']
 
   rabbitmq:
     image: rabbitmq

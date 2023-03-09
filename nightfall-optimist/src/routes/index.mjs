@@ -5,5 +5,15 @@ import transaction from './transaction.mjs';
 import debug from './debug.mjs';
 import getContractAddress from './contract-address.mjs';
 import getContractAbi from './contract-abi.mjs';
+import workers from './workers.mjs';
 
-export { proposer, block, challenger, transaction, getContractAddress, getContractAbi, debug };
+export {
+  proposer,
+  block,
+  challenger,
+  transaction,
+  getContractAddress,
+  getContractAbi,
+  debug,
+  workers,
+};

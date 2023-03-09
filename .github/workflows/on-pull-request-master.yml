@@ -314,7 +314,7 @@ jobs:
   ganache-erc20-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,opt-txw
       DEPLOY_MOCKED_SANCTIONS_CONTRACT: true
     runs-on: ubuntu-20.04
     steps:
@@ -658,7 +658,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,opt-txw
     steps:
       - uses: actions/checkout@master
       - uses: actions/setup-node@v3

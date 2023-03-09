@@ -123,6 +123,22 @@ services:
       - 9229:9229
     command: ['npm', 'run', 'dev']
 
+  opt-txw:
+    build:
+      dockerfile: docker/opt_txw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-optimist/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /app/config/default.js
+    command: ['npm', 'run', 'dev-tx-submitted']
+
   worker:
     build:
       dockerfile: docker/worker.Dockerfile
