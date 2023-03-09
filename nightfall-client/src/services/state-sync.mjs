@@ -10,7 +10,7 @@ import mongo from '@polygon-nightfall/common-files/utils/mongo.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
 import { unpauseQueue } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
-import blockProposedEventHandler from '../event-handlers/block-proposed.mjs';
+import { blockProposedEventHandler } from '../event-handlers/block-proposed.mjs';
 import rollbackEventHandler from '../event-handlers/rollback.mjs';
 
 const { STATE_CONTRACT_NAME, CHALLENGES_CONTRACT_NAME } = constants;

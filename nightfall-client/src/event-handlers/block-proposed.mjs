@@ -10,10 +10,10 @@ import {
   markNullifiedOnChain,
   markOnChain,
   countCommitments,
+  getCommitmentsByHash,
   countNullifiers,
   setSiblingInfo,
-  countCircuitTransactions,
-  isTransactionHashBelongCircuit,
+  getCircuitTransactionsByHash,
 } from '../services/commitment-storage.mjs';
 import getProposeBlockCalldata from '../services/process-calldata.mjs';
 import { zkpPrivateKeys, nullifierKeys } from '../services/keys.mjs';
@@ -33,78 +33,24 @@ const { ZERO, WITHDRAW } = constants;
 
 const { generalise } = gen;
 
+const circuitHash = await getCircuitHash(WITHDRAW);
+
+const withdrawCircuitHash = generalise(circuitHash).hex(32);
+
 // Stores latest L1 block correctly synchronized to speed possible resyncs
 let lastInOrderL1Block = 'earliest';
 // Counter to monitor resync attempts in case something is wrong we can force a
 //   full resync
 let consecutiveResyncAttempts = 0;
 
-// Write updated sibling info to commitment
-async function updateCommitmentSiblingInfo(blockCommitments, latestTree, updatedTimberRoot) {
-  await Promise.all(
-    // eslint-disable-next-line consistent-return
-    blockCommitments.map(async (c, i) => {
-      const count = await countCommitments([c]);
-      if (count > 0) {
-        logger.info(`Commitment found ${blockCommitments[i]}`);
-        const siblingPath = Timber.statelessSiblingPath(
-          latestTree,
-          blockCommitments,
-          i,
-          HASH_TYPE,
-          TIMBER_HEIGHT,
-        );
-        return setSiblingInfo(c, siblingPath, latestTree.leafCount + i, updatedTimberRoot);
-      }
-    }),
-  );
-}
-
-async function updateWithdrawSiblingInfo(block) {
-  // If this L2 block contains withdraw transactions known to this client,
-  // the following needs to be saved for later to be used during finalise/instant withdraw
-  // 1. Save sibling path for the withdraw transaction hash that is present in transaction hashes timber tree
-  // 2. Save transactions hash of the transactions in this L2 block that contains withdraw transactions for this client
-  // transactions hash is a linear hash of the transactions in an L2 block which is calculated during proposeBlock in
-  // the contract
-  let height = 1;
-  while (2 ** height < block.transactionHashes.length) {
-    ++height;
-  }
-
-  const circuitHash = await getCircuitHash(WITHDRAW);
-
-  const withdrawCircuitHash = generalise(circuitHash).hex(32);
-
-  if ((await countCircuitTransactions(block.transactionHashes, withdrawCircuitHash)) > 0) {
-    const transactionHashesTimber = new Timber(...[, , , ,], TXHASH_TREE_HASH_TYPE, height);
-    const updatedTransactionHashesTimber = Timber.statelessUpdate(
-      transactionHashesTimber,
-      block.transactionHashes,
-      TXHASH_TREE_HASH_TYPE,
-      height,
-    );
-
-    await Promise.all(
-      // eslint-disable-next-line consistent-return
-      block.transactionHashes.map(async (transactionHash, i) => {
-        if (await isTransactionHashBelongCircuit(transactionHash, withdrawCircuitHash)) {
-          const siblingPathTransactionHash =
-            updatedTransactionHashesTimber.getSiblingPath(transactionHash);
-          return setTransactionHashSiblingInfo(
-            transactionHash,
-            siblingPathTransactionHash,
-            transactionHashesTimber.leafCount + i,
-            updatedTransactionHashesTimber.root,
-          );
-        }
-      }),
-    );
-  }
-}
-
 // Decrypt transactions in block
-async function decryptTransactions(transactions, transactionHashL1, block, timeBlockL2, data) {
+export async function processTransactions(
+  transactions,
+  transactionHashL1,
+  block,
+  timeBlockL2,
+  data,
+) {
   const dbUpdates = transactions.map(async transaction => {
     let saveTxToDb = false;
 
@@ -112,8 +58,10 @@ async function decryptTransactions(transactions, transactionHashL1, block, timeB
     const nonZeroCommitments = transaction.commitments.filter(c => c !== ZERO);
     const nonZeroNullifiers = transaction.nullifiers.filter(n => n !== ZERO);
 
-    const countOfNonZeroCommitments = await countCommitments([nonZeroCommitments[0]]);
-    const countOfNonZeroNullifiers = await countNullifiers(nonZeroNullifiers);
+    const [countOfNonZeroCommitments, countOfNonZeroNullifiers] = await Promise.all([
+      countCommitments([nonZeroCommitments[0]]),
+      countNullifiers(nonZeroNullifiers),
+    ]);
 
     let isDecrypted = false;
     // In order to check if the transaction is a transfer, we check if the compressed secrets
@@ -170,7 +118,76 @@ async function decryptTransactions(transactions, transactionHashL1, block, timeB
   return dbUpdates;
 }
 
-async function storeTree(latestTree, blockCommitments, transactionHashL1, block) {
+// Write updated sibling info to commitment
+async function updateCommitmentSiblingInfo(blockCommitments, latestTree, updatedTimberRoot) {
+  const myCommitments = (await getCommitmentsByHash(blockCommitments)).map(c => c._id);
+  if (myCommitments.length === 0) return;
+
+  const tmpTree = Timber.statelessSiblingPathInit(
+    latestTree,
+    blockCommitments,
+    HASH_TYPE,
+    TIMBER_HEIGHT,
+  );
+  await Promise.all(
+    // eslint-disable-next-line consistent-return
+    blockCommitments.map(async (c, i) => {
+      if (myCommitments.includes(c)) {
+        const siblingPath = Timber.statelessSiblingPathFinal(
+          latestTree,
+          blockCommitments,
+          i,
+          tmpTree,
+        );
+        return setSiblingInfo(c, siblingPath, latestTree.leafCount + i, updatedTimberRoot);
+      }
+    }),
+  );
+}
+
+async function updateWithdrawSiblingInfo(block) {
+  // If this L2 block contains withdraw transactions known to this client,
+  // the following needs to be saved for later to be used during finalise/instant withdraw
+  // 1. Save sibling path for the withdraw transaction hash that is present in transaction hashes timber tree
+  // 2. Save transactions hash of the transactions in this L2 block that contains withdraw transactions for this client
+  // transactions hash is a linear hash of the transactions in an L2 block which is calculated during proposeBlock in
+  // the contract
+  let height = 1;
+  while (2 ** height < block.transactionHashes.length) {
+    ++height;
+  }
+
+  const withdrawTransactionHashes = (
+    await getCircuitTransactionsByHash(block.transactionHashes, withdrawCircuitHash)
+  ).map(t => t.transactionHash);
+  if (withdrawTransactionHashes.length > 0) {
+    const transactionHashesTimber = new Timber(...[, , , ,], TXHASH_TREE_HASH_TYPE, height);
+    const updatedTransactionHashesTimber = Timber.statelessUpdate(
+      transactionHashesTimber,
+      block.transactionHashes,
+      TXHASH_TREE_HASH_TYPE,
+      height,
+    );
+
+    await Promise.all(
+      // eslint-disable-next-line consistent-return
+      block.transactionHashes.map(async (transactionHash, i) => {
+        if (withdrawTransactionHashes.includes(transactionHash)) {
+          const siblingPathTransactionHash =
+            updatedTransactionHashesTimber.getSiblingPath(transactionHash);
+          return setTransactionHashSiblingInfo(
+            transactionHash,
+            siblingPathTransactionHash,
+            transactionHashesTimber.leafCount + i,
+            updatedTransactionHashesTimber.root,
+          );
+        }
+      }),
+    );
+  }
+}
+
+async function storeTree(latestTree, blockCommitments, transactionHashL1, block, syncing) {
   // Build and save updated tree
   const updatedTimber = Timber.statelessUpdate(
     latestTree,
@@ -179,7 +196,12 @@ async function storeTree(latestTree, blockCommitments, transactionHashL1, block)
     TIMBER_HEIGHT,
   );
 
-  await saveTree(transactionHashL1, block.blockNumberL2, updatedTimber);
+  try {
+    await saveTree(transactionHashL1, block.blockNumberL2, updatedTimber);
+  } catch (err) {
+    // while initial syncing we avoid duplicates errors
+    if (!syncing || !err.message.includes('duplicate key')) throw err;
+  }
 
   logger.debug({
     msg: 'Saved tree for L2 block',
@@ -192,7 +214,7 @@ async function storeTree(latestTree, blockCommitments, transactionHashL1, block)
 /**
  * This handler runs whenever a BlockProposed event is emitted by the blockchain
  */
-async function blockProposedEventHandler(data, syncing) {
+export async function blockProposedEventHandler(data, syncing) {
   // zkpPrivateKey will be used to decrypt secrets whilst nullifierKey will be used to calculate nullifiers for commitments and store them
   const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
   const { transactions, block } = await getProposeBlockCalldata(data);
@@ -229,7 +251,7 @@ async function blockProposedEventHandler(data, syncing) {
   timeBlockL2 = new Date(timeBlockL2 * 1000);
 
   // process transactions in block
-  const dbUpdates = await decryptTransactions(
+  const dbUpdates = await processTransactions(
     transactions,
     transactionHashL1,
     block,
@@ -246,7 +268,13 @@ async function blockProposedEventHandler(data, syncing) {
   });
 
   // compute and store tree
-  const updatedTimber = await storeTree(latestTree, blockCommitments, transactionHashL1, block);
+  const updatedTimber = await storeTree(
+    latestTree,
+    blockCommitments,
+    transactionHashL1,
+    block,
+    syncing,
+  );
 
   // Update sibling information in commitments
   await updateCommitmentSiblingInfo(blockCommitments, latestTree, updatedTimber.root);
@@ -254,5 +282,3 @@ async function blockProposedEventHandler(data, syncing) {
   // update sibling information in withdraw transactions
   await updateWithdrawSiblingInfo(block);
 }
-
-export default blockProposedEventHandler;

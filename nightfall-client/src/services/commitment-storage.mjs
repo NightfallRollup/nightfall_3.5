@@ -4,7 +4,6 @@ Logic for storing and retrieving commitments from a mongo DB.  Abstracted from
 deposit/transfer/withdraw
 */
 import config from 'config';
-import { Mutex } from 'async-mutex';
 import gen from 'general-number';
 import mongo from '@polygon-nightfall/common-files/utils/mongo.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
@@ -21,21 +20,20 @@ import { syncState } from './state-sync.mjs';
 import ClusterMutex from './mutex.mjs';
 
 const { MONGO_URL, COMMITMENTS_DB, COMMITMENTS_COLLECTION } = config;
-const { generalise, GN } = gen;
-const mutex = new Mutex();
+const { generalise } = gen;
 const clusterMutex = new ClusterMutex(3000);
 
 export async function lockUsableCommitments(compressedZkpPublicKey) {
-  console.log("LOCK COMMITMIST", compressedZkpPublicKey)
+  console.log('LOCK COMMITMIST', compressedZkpPublicKey);
   const lockReceipt = await clusterMutex.lock(compressedZkpPublicKey);
-  console.log("LOCK COMMITMIST", compressedZkpPublicKey, lockReceipt)
+  console.log('LOCK COMMITMIST', compressedZkpPublicKey, lockReceipt);
   return lockReceipt;
 }
 
 export function releaseUsableCommitments(compressedZkpPublicKey, lockReceipt) {
-  console.log("RELEASE COMMITMIST", compressedZkpPublicKey, lockReceipt)
+  console.log('RELEASE COMMITMIST', compressedZkpPublicKey, lockReceipt);
   const res = clusterMutex.release(compressedZkpPublicKey, lockReceipt);
-  console.log("RELEASE COMMITMIST", res);
+  console.log('RELEASE COMMITMIST', res);
   return res;
 }
 
@@ -76,6 +74,16 @@ export async function updateCommitment(commitment, updates) {
   return db.collection(COMMITMENTS_COLLECTION).updateOne(query, update);
 }
 
+export async function getCommitmentsByHash(commitments) {
+  const connection = await mongo.connection(MONGO_URL);
+  const query = { _id: { $in: commitments } };
+  const db = connection.db(COMMITMENTS_DB);
+  return db
+    .collection(COMMITMENTS_COLLECTION)
+    .find(query, { projection: { _id: 1 } })
+    .toArray();
+}
+
 // function to get count of commitments. Can also be used to check if it exists
 export async function countCommitments(commitments) {
   const connection = await mongo.connection(MONGO_URL);
@@ -101,6 +109,20 @@ export async function countCircuitTransactions(transactionHashes, circuitHash) {
   };
   const db = connection.db(COMMITMENTS_DB);
   return db.collection(COMMITMENTS_COLLECTION).countDocuments(query);
+}
+
+// function to get count of transaction hashes that belongs to the circuitHash specified
+export async function getCircuitTransactionsByHash(transactionHashes, circuitHash) {
+  const connection = await mongo.connection(MONGO_URL);
+  const query = {
+    transactionHash: { $in: transactionHashes },
+    nullifierCircuitHash: circuitHash,
+  };
+  const db = connection.db(COMMITMENTS_DB);
+  return db
+    .collection(COMMITMENTS_COLLECTION)
+    .find(query, { projection: { transactionHash: 1, _id: 0 } })
+    .toArray();
 }
 
 // function to get if the transaction hash belongs to a withdraw transaction
@@ -977,8 +999,10 @@ export async function findUsableCommitmentsMutex(
   maxNullifiers,
   maxNonFeeNullifiers,
 ) {
-  console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXX 1234',compressedZkpPublicKey.limbs(32)[0]);
-  const res = await axios.post('http://client/mutex/lock-commitments', { compressedZkpPublicKey: compressedZkpPublicKey.limbs(32)[0] });
+  console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXX 1234', compressedZkpPublicKey.limbs(32)[0]);
+  const res = await axios.post('http://client/mutex/lock-commitments', {
+    compressedZkpPublicKey: compressedZkpPublicKey.limbs(32)[0],
+  });
   logger.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXX LOCK', res.data.lockReceipt);
   const usableCommitments = findUsableCommitments(
     compressedZkpPublicKey,

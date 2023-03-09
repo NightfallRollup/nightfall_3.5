@@ -7,7 +7,6 @@ import {
   getContractAbi,
   finaliseWithdrawal,
   isValidWithdrawal,
-  incomingViewingKey,
   setInstantWithdrawl,
   generateZkpKeys,
   x509,
@@ -31,7 +30,6 @@ setupHttpDefaults(
     app.use('/contract-abi', getContractAbi);
     app.use('/finalise-withdrawal', finaliseWithdrawal);
     app.use('/valid-withdrawal', isValidWithdrawal);
-    app.use('/incoming-viewing-key', incomingViewingKey);
     app.use('/set-instant-withdrawal', setInstantWithdrawl);
     app.use('/generate-zkp-keys', generateZkpKeys);
     app.use('/x509', x509);

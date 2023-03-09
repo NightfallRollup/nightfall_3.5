@@ -297,6 +297,14 @@ export async function saveTransaction(_transaction) {
 }
 
 /**
+How many transactions are waiting to be processed into a block?
+*/
+export async function numberOfMempoolTransactions() {
+  const connection = await mongo.connection(MONGO_URL);
+  const db = connection.db(OPTIMIST_DB);
+  return db.collection(TRANSACTIONS_COLLECTION).countDocuments({ mempool: true });
+}
+/**
  * Add a set of L2 transactions back to the mempool after a block has been rolled back
  */
 export async function addTransactionsToMemPool(transactionHashes, blockNumberL2) {

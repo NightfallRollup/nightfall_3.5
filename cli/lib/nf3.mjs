@@ -45,7 +45,8 @@ function createQueue(options) {
 // TODO when SDK is refactored such that these functions are split by user, proposer and challenger,
 // then there will only be one queue here. The constructor does not need to initialise clientBaseUrl
 // for proposer/liquidityProvider/challenger and optimistBaseUrl, optimistWsUrl for a user etc
-const userQueue = createQueue({ autostart: true, concurrency: 1 });
+//const userQueue = createQueue({ autostart: true, concurrency: 1 });
+const userQueue = createQueue({ autostart: true });
 const proposerQueue = createQueue({ autostart: true });
 const challengerQueue = createQueue({ autostart: true, concurrency: 1 });
 const liquidityProviderQueue = createQueue({ autostart: true, concurrency: 1 });
@@ -108,6 +109,8 @@ class Nf3 {
   nonceMutex = new Mutex();
 
   clientAuthenticationKey;
+
+  nDeposits = 0;
 
   // min fee or reward one should hold for withdaw
   // in State contract.
@@ -666,7 +669,7 @@ class Nf3 {
       providedCommitmentsFee,
       salt,
     });
-    console.log('NEW DEPOSIT REQUESTED DONE');
+    console.log('NEW DEPOSIT REQUESTED DONE', this.nDeposits++);
 
     if (res.data.error) {
       throw new Error(res.data.error);
@@ -956,7 +959,7 @@ class Nf3 {
     with the makeKeys function).
     */
   async subscribeToIncomingViewingKeys() {
-    return axios.post(`${this.clientBaseUrl}/incoming-viewing-key`, {
+    return axios.post(`http://localhost:3020/incoming-viewing-key`, {
       zkpPrivateKeys: [this.zkpKeys.zkpPrivateKey],
       nullifierKeys: [this.zkpKeys.nullifierKey],
     });
@@ -1438,7 +1441,7 @@ class Nf3 {
     value of each propery is the number of tokens originating from that contract.
     */
   async getLayer2Balances({ ercList } = {}) {
-    //const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
+    // const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
     const res = await axios.get(`http://localhost:3010/commitment/balance`, {
       params: {
         compressedZkpPublicKey: this.zkpKeys.compressedZkpPublicKey,
@@ -1449,7 +1452,7 @@ class Nf3 {
   }
 
   async getLayer2BalancesUnfiltered({ ercList } = {}) {
-    //const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
+    // const res = await axios.get(`${this.clientBaseUrl}/commitment/balance`, {
     const res = await axios.get(`http://localhost:3010/commitment/balance`, {
       params: {
         compressedZkpPublicKey: ercList,

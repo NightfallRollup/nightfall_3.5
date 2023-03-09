@@ -157,6 +157,8 @@ describe('ERC20 tests', () => {
     it('Should decrement user L2 balance after transferring some ERC20 to other wallet, and increment the other wallet balance', async function () {
       const userL2BalanceBefore = await getLayer2Balances(nf3User, erc20Address);
       const user2L2BalanceBefore = await getLayer2Balances(nf3User2, erc20Address);
+      console.log('L2 Balances before', userL2BalanceBefore, user2L2BalanceBefore);
+      console.log('Transfer 1 -> 2', transferValue + fee);
 
       const res = await nf3User.transfer(
         false,
@@ -173,6 +175,7 @@ describe('ERC20 tests', () => {
 
       const userL2BalanceAfter = await getLayer2Balances(nf3User, erc20Address);
       const user2L2BalanceAfter = await getLayer2Balances(nf3User2, erc20Address);
+      console.log('L2 Balances after', userL2BalanceAfter, user2L2BalanceAfter);
       expect(userL2BalanceAfter - userL2BalanceBefore).to.be.equal(-(transferValue + fee));
       expect(user2L2BalanceAfter - user2L2BalanceBefore).to.be.equal(transferValue);
     });
@@ -198,12 +201,15 @@ describe('ERC20 tests', () => {
     });
 
     it('should perform a transfer by specifying the commitment that provides enough value to cover value + fee', async function () {
+      console.log("XXXX")
       const userL2BalanceBefore = await getLayer2Balances(nf3User, erc20Address);
+      console.log("YYY")
 
       const userCommitments = await getUserCommitments(
         environment.clientApiUrl,
         nf3User.zkpKeys.compressedZkpPublicKey,
       );
+      console.log("ZZZ")
 
       const erc20Commitments = userCommitments
         .filter(c => c.ercAddress === generalise(erc20Address).hex(32))
@@ -239,6 +245,7 @@ describe('ERC20 tests', () => {
     it('should perform a transfer by specifying the commitment that provides enough value to cover value', async function () {
       const userL2BalanceBefore = await getLayer2Balances(nf3User, erc20Address);
 
+      console.log("L2 BALANCE BEFORE", userL2BalanceBefore);
       const userCommitments = await getUserCommitments(
         environment.clientApiUrl,
         nf3User.zkpKeys.compressedZkpPublicKey,
@@ -271,6 +278,7 @@ describe('ERC20 tests', () => {
       expectTransaction(res);
       await makeBlock();
 
+      console.log("L2 BALANCE AFTER", userL2BalanceAfter);
       const userL2BalanceAfter = await getLayer2Balances(nf3User, erc20Address);
       expect(userL2BalanceAfter - userL2BalanceBefore).to.be.equal(-fee);
     });

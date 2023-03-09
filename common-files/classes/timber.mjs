@@ -685,6 +685,38 @@ class Timber {
 
   /**
   @method
+  This function statelessly (i.e. does not modify timber.tree) calculates the sibling path for the element leaves[leafIndex].
+  It only requires the frontier and leafCount to do so. This method assumes we want to calculate the sibling path of a number
+  of leaves at the same level. So, to optimize computation, we dive process in two steps
+  1- statelessSiblingPathInit : Computes the final tree. This is common for all leaves
+  2- statelessSiblinbPathFinal: Computes the path for each leave
+   * @param timber - The timber instance that contains the frontier and leafCount.
+   * @param leaves - The elements that will be inserted.
+   * @returns An object { isMember: bool, path: Array<{dir: 'string',value: string }> } representing the sibling path for that element.
+   */
+  static statelessSiblingPathInit(timber, leaves, hashType, height) {
+    if (leaves.length === 0) return { isMember: false, path: [] };
+    const leavesInsertOrder = batchLeaves(timber.leafCount, leaves, []);
+
+    const frontierTree = frontierToTree(timber, height);
+    const finalTree = leavesInsertOrder.reduce(
+      (acc, curr) => acc.insertLeaves(curr),
+      new Timber(timber.root, timber.frontier, timber.leafCount, frontierTree, hashType, height),
+    );
+    return finalTree;
+  }
+
+  static statelessSiblingPathFinal(timber, leaves, leafIndex, finalTree) {
+    if (leaves.length === 0 || leafIndex >= leaves.length || leafIndex < 0)
+      return { isMember: false, path: [] };
+    const leafVal = leaves[leafIndex];
+    const leafIndexAfterInsertion = leafIndex + timber.leafCount;
+
+    return finalTree.getSiblingPath(leafVal, leafIndexAfterInsertion);
+  }
+
+  /**
+  @method
   Rolls a tree back to a given leafcount
   @param {number} leafCount - The leafcount to which the tree should be rolled back to.
   @returns {object} - Updated timber instance.

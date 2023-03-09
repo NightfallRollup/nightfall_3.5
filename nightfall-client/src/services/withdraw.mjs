@@ -22,6 +22,7 @@ import { getCommitmentInfo } from '../utils/getCommitmentInfo.mjs';
 import { submitTransaction } from '../utils/submitTransaction.mjs';
 import { ZkpKeys } from './keys.mjs';
 
+
 const { VK_IDS } = config;
 const { SHIELD_CONTRACT_NAME, WITHDRAW } = constants;
 const { generalise } = gen;
