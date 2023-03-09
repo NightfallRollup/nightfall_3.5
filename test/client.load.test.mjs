@@ -23,8 +23,7 @@ chai.use(chaiAsPromised);
 
 // we need require here to import jsons
 const environment = config.ENVIRONMENTS[process.env.ENVIRONMENT] || config.ENVIRONMENTS.localhost;
-const { optimistTxWorkerApiUrl } = environment;
-const { N_TRANSACTIONS = 20 } = process.env;
+const { N_TRANSACTIONS = 20, N_ITER = 10 } = process.env;
 
 const {
   tokenConfigs: { tokenType, tokenId },
@@ -33,10 +32,12 @@ const {
 } = config.TEST_OPTIONS;
 
 const initTx = N_TRANSACTIONS;
+const maxNIter = N_ITER;
 const nf3Users = [new Nf3(signingKeys.user1, environment), new Nf3(signingKeys.user2, environment)];
 const nf3Proposer1 = new Nf3(signingKeys.proposer1, environment);
 const transferValue = 1;
 const depositValue = 200;
+let nTotalTransactions = 0;
 
 const web3Client = new Web3Client();
 
@@ -68,9 +69,9 @@ describe('Tx worker test', () => {
       process.exit();
     }
 
-    console.log(`Connecting to TX Workers at ${optimistTxWorkerApiUrl}`);
     await nf3Proposer1.registerProposer('http://optimist', minStake);
     await nf3Proposer1.startProposer();
+    // Leave some time for proposer to register
     await waitForTimeout(5000);
 
     console.log(`Generating ${N_TRANSACTIONS} transactions`);
@@ -88,10 +89,13 @@ describe('Tx worker test', () => {
 
   describe('Process Transactions', () => {
     it('Initial Deposits', async function () {
+      performanceBenchmark.start('Test');
       logger.info('Start');
       const balance = await nf3Users[0].getLayer2Balances();
       console.log('L2 Balance', balance);
       console.log(`Requesting ${initTx} deposits`);
+      let nTx = await numberOfMempoolTransactions();
+      nTotalTransactions += initTx + nTx;
       // We create enough transactions to initialize tx workers
       performanceBenchmark.start('Deposits');
       await depositNTransactionsAsync(
@@ -104,65 +108,81 @@ describe('Tx worker test', () => {
         0,
       );
       performanceBenchmark.stop('Deposits');
-      await waitForTimeout(50000);
-      let nTx = await numberOfMempoolTransactions();
-      console.log('Pending transactions on mempool', nTx);
+      nTx = await numberOfMempoolTransactions();
+      // Wait for transactions to reach optimist mempool
+      while (nTx === 0) {
+        logger.info(`Waiting for mempool transactions ${nTx}/${initTx}`);
+        await waitForTimeout(1000);
+        nTx = await numberOfMempoolTransactions();
+      }
+
+      console.log('Pending transactions in mempool', nTx);
+      // start building blocks
       while (nTx) {
         performanceBenchmark.start('Blocks');
         await makeBlock();
         performanceBenchmark.stop('Blocks');
         nTx = await numberOfMempoolTransactions();
-        console.log('Pending transactions on mempool', nTx);
+        console.log(`Pending transactions in mempool ${nTx}/${initTx}`);
       }
-
-      // log stats for id a
-      console.log(JSON.stringify(performanceBenchmark.stats('Deposits'), null, 4));
-      console.log(JSON.stringify(performanceBenchmark.stats('Blocks'), null, 4));
     });
 
     it('Deposits/Transfers', async function () {
-      logger.info('Start');
-      console.log(`Requesting ${initTx} deposits and transfers`);
-      // We create enough transactions to initialize tx workers
-      performanceBenchmark.start('Deposits');
-      await depositNTransactionsAsync(
-        nf3Users[0],
-        initTx / 2,
-        erc20Address,
-        tokenType,
-        depositValue,
-        tokenId,
-        0,
-      );
-      performanceBenchmark.stop('Deposits');
-      performanceBenchmark.start('Transfers');
-      await transferNTransactionsAsync(
-        nf3Users[0],
-        initTx / 2,
-        erc20Address,
-        tokenType,
-        transferValue,
-        tokenId,
-        nf3Users[0].zkpKeys.compressedZkpPublicKey,
-        0,
-        true,
-      );
-      performanceBenchmark.stop('Transfers');
-      await waitForTimeout(50000);
-      let nTx = await numberOfMempoolTransactions();
-      console.log('Pending transactions on mempool', nTx);
-      while (nTx) {
-        performanceBenchmark.start('Blocks');
-        await makeBlock();
-        performanceBenchmark.stop('Blocks');
-        nTx = await numberOfMempoolTransactions();
-        console.log('Pending transactions on mempool', nTx);
+      for (let niter = 0; niter < maxNIter; niter++) {
+        logger.info('Start');
+        console.log(`Requesting ${initTx} deposits and transfers`);
+        nTotalTransactions += initTx;
+        // We create enough transactions to initialize tx workers
+        performanceBenchmark.start('Deposits');
+        await depositNTransactionsAsync(
+          nf3Users[0],
+          initTx / 2,
+          erc20Address,
+          tokenType,
+          depositValue,
+          tokenId,
+          0,
+        );
+        performanceBenchmark.stop('Deposits');
+        performanceBenchmark.start('Transfers');
+        await transferNTransactionsAsync(
+          nf3Users[0],
+          initTx / 2,
+          erc20Address,
+          tokenType,
+          transferValue,
+          tokenId,
+          nf3Users[0].zkpKeys.compressedZkpPublicKey,
+          0,
+          true,
+        );
+        performanceBenchmark.stop('Transfers');
+        let nTx = await numberOfMempoolTransactions();
+        // Wait for transactions to reach optimist mempool
+        while (nTx === 0) {
+          logger.info(`Waiting for mempool transactions ${nTx}/${initTx}`);
+          await waitForTimeout(1000);
+          nTx = await numberOfMempoolTransactions();
+        }
+
+        console.log('Pending transactions in mempool', nTx);
+        // start building blocks
+        while (nTx) {
+          performanceBenchmark.start('Blocks');
+          await makeBlock();
+          performanceBenchmark.stop('Blocks');
+          nTx = await numberOfMempoolTransactions();
+          console.log(`Pending transactions in mempool ${nTx}/${initTx}`);
+        }
       }
+      performanceBenchmark.stop('Test');
 
       // log stats for id a
       console.log(JSON.stringify(performanceBenchmark.stats('Deposits'), null, 4));
       console.log(JSON.stringify(performanceBenchmark.stats('Transfers'), null, 4));
       console.log(JSON.stringify(performanceBenchmark.stats('Blocks'), null, 4));
+      console.log(JSON.stringify(performanceBenchmark.stats('Test'), null, 4));
+      logger.info(`Total transactions sent ${nTotalTransactions}`);
     });
   });
 
