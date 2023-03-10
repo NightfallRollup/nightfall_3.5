@@ -65,7 +65,7 @@ services:
 
   client-txw:
     build:
-      dockerfile: docker/client-tx-worker.Dockerfile
+      dockerfile: docker/client_txw.Dockerfile
       context: ..
     image: client-txw:latest
     volumes:
@@ -109,7 +109,7 @@ services:
 
   client-bpw:
     build:
-      dockerfile: docker/client-bp-worker.Dockerfile
+      dockerfile: docker/client_bwp.Dockerfile
       context: ..
     image: client-bpw:latest
     volumes:
