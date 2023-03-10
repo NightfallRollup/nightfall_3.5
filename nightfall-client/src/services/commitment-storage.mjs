@@ -681,12 +681,15 @@ async function verifyEnoughCommitments(
 
   if (maxNonFeeNullifiers !== 0) {
     // Get the commitments from the database
-    const commitmentArray = await getAvailableCommitments(
+    const _commitmentArray = await getAvailableCommitments(
       db,
       compressedZkpPublicKey,
       ercAddress,
       tokenId,
     );
+
+    // commitments may exist, but may not be ready for use. So lets use the ones that are fully ready
+    const commitmentArray = _commitmentArray.filter(c => 'siblingPath' in c);
 
     // If not commitments are found, the transfer/withdrawal cannot be paid, so throw an error
     if (commitmentArray.length === 0)
