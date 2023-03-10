@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/index.mjs",
     "start-tx-submitted-worker": "node src/workers/optimist-tx-worker.mjs",
+    "start-block-assembly-worker": "node src/workers/optimist-ba-worker.mjs",
+    "start-block-proposed-worker": "node src/workers/optimist-bp-worker.mjs",
     "dev-tx-submitted-worker": "nodemon src/workers/optimist-tx-worker.mjs",
+    "dev-block-assembly-worker": "nodemon src/workers/optimist-ba-worker.mjs",
+    "dev-block-proposed-worker": "nodemon src/workers/optimist-bp-worker.mjs",
     "start:debug": "node --inspect=0.0.0.0:9229 src/index.mjs",
     "dev": "nodemon src/index.mjs"
   },

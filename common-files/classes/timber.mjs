@@ -709,10 +709,11 @@ class Timber {
   static statelessSiblingPathFinal(timber, leaves, leafIndex, finalTree) {
     if (leaves.length === 0 || leafIndex >= leaves.length || leafIndex < 0)
       return { isMember: false, path: [] };
+    const tmpTree = { ...finalTree };
     const leafVal = leaves[leafIndex];
     const leafIndexAfterInsertion = leafIndex + timber.leafCount;
 
-    return finalTree.getSiblingPath(leafVal, leafIndexAfterInsertion);
+    return tmpTree.getSiblingPath(leafVal, leafIndexAfterInsertion);
   }
 
   /**

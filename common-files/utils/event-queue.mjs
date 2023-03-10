@@ -109,37 +109,40 @@ function waitForConfirmation(eventObject) {
 
   const { transactionHash, blockNumber } = eventObject;
   return new Promise((resolve, reject) => {
-    let confirmedBlocks = 0;
-    const id = setInterval(async () => {
-      /*
+    // If event is already over the number of confirmations, it doesnt need to wait
+    //  for CONFIRMATION_POLL_TIME and event will be dispatched immediatelly
+    let niter = 0;
+    const id = setInterval(
+      async () => {
+        niter += 1;
+        /*
         get the transaction that caused the event
         if it's been in a chain reorg then it will have been removed.
        */
-      if (removed[transactionHash] > 0) {
-        clearInterval(id);
-        removed[eventObject.transactionHash]--;
-        reject(
-          new Error(
-            `Event removed; probable chain reorg.  Event was ${eventObject.event}, transaction hash was ${transactionHash}`,
-          ),
-        );
-      }
-      const currentBlock = await web3.eth.getBlock('latest');
-      if (currentBlock.number - blockNumber > confirmedBlocks) {
-        confirmedBlocks = currentBlock.number - blockNumber;
-      }
-      if (confirmedBlocks >= CONFIRMATIONS) {
-        clearInterval(id);
+        if (removed[transactionHash] > 0) {
+          clearInterval(id);
+          removed[eventObject.transactionHash]--;
+          reject(
+            new Error(
+              `Event removed; probable chain reorg.  Event was ${eventObject.event}, transaction hash was ${transactionHash}`,
+            ),
+          );
+        }
+        const currentBlock = await web3.eth.getBlock('latest');
+        if (currentBlock.number - blockNumber >= CONFIRMATIONS) {
+          clearInterval(id);
 
-        logger.debug({
-          msg: 'Event has been confirmed',
-          event: eventObject.event,
-          total: currentBlock.number - blockNumber,
-        });
+          logger.debug({
+            msg: 'Event has been confirmed',
+            event: eventObject.event,
+            total: currentBlock.number - blockNumber,
+          });
 
-        resolve(eventObject);
-      }
-    }, CONFIRMATION_POLL_TIME);
+          resolve(eventObject);
+        }
+      },
+      niter === 0 ? 0 : CONFIRMATION_POLL_TIME,
+    );
   });
 }
 

@@ -23,7 +23,7 @@ chai.use(chaiAsPromised);
 
 // we need require here to import jsons
 const environment = config.ENVIRONMENTS[process.env.ENVIRONMENT] || config.ENVIRONMENTS.localhost;
-const { N_TRANSACTIONS = 20, N_ITER = 2 } = process.env;
+const { N_TRANSACTIONS = 100, N_ITER = 1 } = process.env;
 
 const {
   tokenConfigs: { tokenType, tokenId },
@@ -69,7 +69,7 @@ describe('Tx worker test', () => {
       process.exit();
     }
 
-    await nf3Proposer1.registerProposer('http://optimist', minStake);
+    await nf3Proposer1.registerProposer('http://localhost:3000', minStake);
     await nf3Proposer1.startProposer();
     // Leave some time for proposer to register
     await waitForTimeout(5000);
@@ -171,6 +171,7 @@ describe('Tx worker test', () => {
           performanceBenchmark.start('Blocks');
           await makeBlock();
           performanceBenchmark.stop('Blocks');
+          await waitForTimeout(5000);
           nTx = await numberOfMempoolTransactions();
           console.log(`Pending transactions in mempool ${nTx}/${initTx}`);
         }
@@ -178,10 +179,10 @@ describe('Tx worker test', () => {
       performanceBenchmark.stop('Test');
 
       // log stats for id a
-      console.log(JSON.stringify(performanceBenchmark.stats('Deposits'), null, 4));
-      console.log(JSON.stringify(performanceBenchmark.stats('Transfers'), null, 4));
-      console.log(JSON.stringify(performanceBenchmark.stats('Blocks'), null, 4));
-      console.log(JSON.stringify(performanceBenchmark.stats('Test'), null, 4));
+      console.log(JSON.stringify(performanceBenchmark.stats('Deposits', 'short'), null, 4));
+      console.log(JSON.stringify(performanceBenchmark.stats('Transfers', 'short'), null, 4));
+      console.log(JSON.stringify(performanceBenchmark.stats('Blocks', 'short'), null, 4));
+      console.log(JSON.stringify(performanceBenchmark.stats('Test', 'short'), null, 4));
       logger.info(`Total transactions sent ${nTotalTransactions}`);
     });
   });

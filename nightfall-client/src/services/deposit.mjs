@@ -12,6 +12,7 @@ import { randValueLT } from '@polygon-nightfall/common-files/utils/crypto/crypto
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { compressProof } from '@polygon-nightfall/common-files/utils/curve-maths/curves.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import {
   getCircuitHash,
   generateProof,
@@ -29,6 +30,7 @@ const { SHIELD_CONTRACT_NAME, BN128_GROUP_ORDER, DEPOSIT, DEPOSIT_FEE } = consta
 const { generalise } = gen;
 
 async function deposit(depositParams) {
+  pm.start('deposit');
   logger.info('Creating a deposit transaction');
   const { tokenType, providedCommitmentsFee, ...items } = depositParams;
   const ercAddress = generalise(items.ercAddress.toLowerCase());
@@ -111,6 +113,7 @@ async function deposit(depositParams) {
 
   if (commitmentDB) {
     if (commitmentDB.isOnChain !== -1) {
+      pm.stop('deposit');
       throw new Error('You can not re-send a commitment that is already on-chain');
     } else {
       commitment = commitmentDB;
@@ -147,6 +150,7 @@ async function deposit(depositParams) {
     recipientPublicKeys: commitmentsInfo.newCommitments.map(o => o.preimage.zkpPublicKey),
   };
 
+  pm.start('deposit - computeCircuitInputs');
   const witness = computeCircuitInputs(
     publicData,
     privateData,
@@ -155,12 +159,15 @@ async function deposit(depositParams) {
     VK_IDS[circuitName].numberNullifiers,
     VK_IDS[circuitName].numberCommitments,
   );
+  pm.stop('deposit - computeCircuitInputs');
   logger.debug({
     msg: 'witness input is',
     witness,
   });
+  pm.start('deposit - generateProof');
   // call a worker to generate the proof
   const res = await generateProof({ folderpath: circuitName, witness });
+  pm.stop('deposit - generateProof');
 
   logger.trace({
     msg: 'Received response from generate-proof',
@@ -172,14 +179,19 @@ async function deposit(depositParams) {
   // first, get the contract instance
 
   // next we need to compute the optimistic Transaction object
+  pm.start('deposit - compressProof');
   const transaction = { ...publicData, proof: compressProof(proof) };
+  pm.stop('deposit - compressProof');
+  pm.start('deposit - txCalcHash');
   transaction.transactionHash = Transaction.calcHash(transaction);
+  pm.stop('deposit - txCalcHash');
 
   logger.debug({
     msg: `Client made ${circuitName}`,
     transaction,
   });
 
+  pm.start('deposit - submitTransaction');
   // and then we can create an unsigned blockchain transaction
   try {
     // store the commitment on successful computation of the transaction
@@ -193,8 +205,11 @@ async function deposit(depositParams) {
       nullifierKey,
       false,
     );
+    pm.stop('deposit - submitTransaction');
+    pm.stop('deposit');
     return { rawTransaction, transaction };
   } catch (err) {
+    pm.stop('deposit');
     logger.error(err);
     throw err; // let the caller handle the error
   }

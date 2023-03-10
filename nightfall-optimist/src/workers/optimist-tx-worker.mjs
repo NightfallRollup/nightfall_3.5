@@ -6,7 +6,7 @@
   This cluster of workers is provided as a complementary service to optimist to process
   transactions received in order to boost performance, so that optimist can focus on other activities.
   Optimist doesn't need to use this cluster of workers and can keep processing transactions
-  received. To configure Optimist in legacy mode, just provide and invalid value to TX_WORKER_URL.
+  received. To configure Optimist in legacy mode, just provide and invalid value to OPTIMIST_TX_WORKER_URL.
 
   Else, the cluster of workers will provide three services to optimist:
   - post('/workers/transaction-submitted') : Takes an incomming transaction received by transactionSubmittedEventHandler and
@@ -25,6 +25,7 @@ import os from 'os';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 
 import {
   submitTransaction,
@@ -111,7 +112,7 @@ async function initWorkers() {
               When comparing this with getTransactionSubmittedCalldata,
               note we dont need to decompressProof as proofs are only compressed if they go on-chain.
           */
-          transactionSubmittedEventHandler({
+          submitTransaction({
             offchain: true,
             ...transaction,
             fee: Number(fee),
@@ -121,6 +122,25 @@ async function initWorkers() {
         }
       } catch (err) {
         res.sendStatus(400);
+      }
+    });
+
+    // get stats
+    app.get('/debug/pm-stats', async (req, res) => {
+      try {
+        const stats = pm.stats();
+        res.json({ stats });
+      } catch (err) {
+        res.sendStatus(500);
+      }
+    });
+    // Reset stats
+    app.post('/debug/pm-reset', async (req, res) => {
+      try {
+        pm.reset();
+        res.sendStatus(200);
+      } catch (err) {
+        res.sendStatus(500);
       }
     });
 

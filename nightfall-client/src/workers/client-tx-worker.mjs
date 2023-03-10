@@ -14,6 +14,7 @@ import {
   transaction,
   transfer,
   deposit,
+  debug,
 } from '../routes/index.mjs';
 
 const { clientTxWorkerCount } = config.CLIENT_TX_WORKER_PARAMS;
@@ -58,6 +59,7 @@ async function initWorkers() {
         app.use('/transaction', transaction);
         app.use('/deposit', deposit);
         app.use('/transfer', transfer);
+        app.use('/debug', debug);
       },
       true,
       false,

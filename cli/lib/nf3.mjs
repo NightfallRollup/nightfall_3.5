@@ -305,7 +305,8 @@ class Nf3 {
   @async
   */
   async makeBlockNow() {
-    return axios.post(`${this.optimistBaseUrl}/block/make-now`);
+    //return axios.post(`${this.optimistBaseUrl}/block/make-now`);
+    return axios.post(`http://localhost:3030/block/make-now`);
   }
 
   async estimateGas(contractAddress, unsignedTransaction) {
@@ -1247,7 +1248,8 @@ class Nf3 {
     */
   async startProposer() {
     const proposeEmitter = this.createEmitter();
-    const connection = new ReconnectingWebSocket(this.optimistWsUrl, [], { WebSocket });
+    //const connection = new ReconnectingWebSocket(this.optimistWsUrl, [], { WebSocket });
+    const connection = new ReconnectingWebSocket('ws://localhost:3031', [], { WebSocket });
 
     this.websockets.push(connection); // save so we can close it properly later
 
@@ -1291,7 +1293,8 @@ class Nf3 {
 
             // block proposed is reverted. Send transactions back to mempool
             try {
-              await axios.get(`${this.optimistBaseUrl}/block/reset-localblock`);
+              //await axios.get(`${this.optimistBaseUrl}/block/reset-localblock`);
+              await axios.get(`http://localhost:3030/block/reset-localblock`);
             } catch (errorResetLocalBlock) {
               logger.error({
                 msg: 'Error while trying to reset local block',

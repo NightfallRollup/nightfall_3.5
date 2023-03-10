@@ -1,4 +1,5 @@
 import { Mutex } from 'async-mutex';
+import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 
 /**
  * ClusterMutex defines a mutex implementation that can be used to protect shared resources used by different
@@ -41,14 +42,17 @@ class ClusterMutex {
     const mutexIndex = userIndex % MAX_N_MUTEX;
     await this.mutexData[mutexIndex].mutex.acquire();
     this.mutexData[mutexIndex].reserve = Math.floor(Math.random() * MAX_RESERVE);
-    this.mutexData[mutexIndex].timeout = setTimeout(
-      () => {
-        this.mutexData[mutexIndex].mutex.release();
-        this.mutexData[mutexIndex].reserve = 0;
-      },
+    if (this.timeout !== -1) {
+      this.mutexData[mutexIndex].timeout = setTimeout(
+        () => {
+          logger.error(`Mutex ${this.mutexData[mutexIndex].reserve} timeout`);
+          this.mutexData[mutexIndex].mutex.release();
+          this.mutexData[mutexIndex].reserve = 0;
+        },
 
-      this.timeout,
-    );
+        this.timeout,
+      );
+    }
 
     return this.mutexData[mutexIndex].reserve;
   }

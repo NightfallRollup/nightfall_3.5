@@ -11,6 +11,7 @@ import {
   generateZkpKeys,
   x509,
   mutex,
+  debug,
 } from './routes/index.mjs';
 
 const app = express();
@@ -34,6 +35,7 @@ setupHttpDefaults(
     app.use('/generate-zkp-keys', generateZkpKeys);
     app.use('/x509', x509);
     app.use('/mutex', mutex);
+    app.use('/debug', debug);;
   },
   true,
   false,

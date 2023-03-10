@@ -3,10 +3,15 @@ import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { queueManager, unpauseQueue } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
 import express from 'express';
 import { setupHttpDefaults } from '@polygon-nightfall/common-files/utils/httputils.mjs';
-import { startEventQueue } from '../event-handlers/index.mjs';
-import { blockProposedEventHandler } from '../event-handlers/block-proposed.mjs';
-import removeBlockProposedEventHandler from '../event-handlers/chain-reorg.mjs';
-import { incomingViewingKey, debug } from '../routes/index.mjs';
+import {
+  startEventQueue,
+  subscribeToProposedBlockWebSocketConnection,
+} from '../event-handlers/index.mjs';
+import blockProposedEventHandler, {
+  setBlockProposedWebSocketConnection,
+} from '../event-handlers/block-proposed.mjs';
+import { removeBlockProposedEventHandler } from '../event-handlers/chain-reorg.mjs';
+import { debug } from '../routes/index.mjs';
 
 const eventHandlers = {
   BlockProposed: blockProposedEventHandler,
@@ -22,7 +27,6 @@ const app = express();
 setupHttpDefaults(
   app,
   app => {
-    app.use('/incoming-viewing-key', incomingViewingKey);
     app.use('/debug', debug);
   },
   true,
@@ -31,6 +35,7 @@ setupHttpDefaults(
 app.listen(80);
 
 const main = async () => {
+  await subscribeToProposedBlockWebSocketConnection(setBlockProposedWebSocketConnection);
   logger.info('Block Proposer Worker initialized...');
   await startEventQueue(queueManager, eventHandlers);
   unpauseQueue(0);

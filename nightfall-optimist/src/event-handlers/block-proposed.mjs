@@ -6,6 +6,7 @@ import Timber from '@polygon-nightfall/common-files/classes/timber.mjs';
 import { getTimeByBlock } from '@polygon-nightfall/common-files/utils/block-utils.mjs';
 import { queues } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import { checkBlock } from '../services/check-block.mjs';
 import {
   saveBlock,
@@ -37,6 +38,8 @@ export function setBlockProposedWebSocketConnection(_ws) {
 This handler runs whenever a BlockProposed event is emitted by the blockchain
 */
 async function blockProposedEventHandler(data) {
+  pm.start('blockProposedEventHandler');
+  pm.stop('blockAssembly - blockProposed');
   const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
   const { block, transactions } = await getProposeBlockCalldata(data);
   const nextBlockNumberL2 = await getNumberOfL2Blocks();
@@ -94,6 +97,7 @@ async function blockProposedEventHandler(data) {
   timeBlockL2 = new Date(timeBlockL2 * 1000);
 
   // Block preconditions are already checked, so we can saveBlock and transactions simultaneously
+  pm.start('blockProposedEventHandler - save');
   await Promise.all([
     // save the block to facilitate later lookup of block data
     // we will save before checking because the database at any time should reflect the state the blockchain holds
@@ -111,7 +115,9 @@ async function blockProposedEventHandler(data) {
       saveTransaction({ ...tx, blockNumberL2: block.blockNumberL2, mempool: false }),
     ),
   ]);
+  pm.stop('blockProposedEventHandler - save');
 
+  pm.start('blockProposedEventHandler - deleteDup');
   const blockCommitments = transactions
     .map(t => t.commitments.filter(c => c !== ZERO))
     .flat(Infinity);
@@ -127,7 +133,9 @@ async function blockProposedEventHandler(data) {
     ),
     getTreeByBlockNumberL2(block.blockNumberL2 - 1),
   ]);
+  pm.stop('blockProposedEventHandler - deleteDup');
 
+  pm.start('blockProposedEventHandler - stateLess Timber');
   const updatedTimber = Timber.statelessUpdate(
     latestTree,
     blockCommitments,
@@ -137,6 +145,7 @@ async function blockProposedEventHandler(data) {
 
   const res = await saveTree(block.blockNumber, block.blockNumberL2, updatedTimber);
   logger.debug(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
+  pm.stop('blockProposedEventHandler - stateLess Timber');
 
   // signal to the block-making routines that a block is received: they
   // won't make a new block until their previous one is stored on-chain.
@@ -150,11 +159,14 @@ async function blockProposedEventHandler(data) {
   // will get saved and eventually all these blocks will be removed as part of the rollback
   // of the first bad block
   try {
+    pm.start('blockProposedEventHandler - checkBlock');
     if (queues[2].length === 0) await checkBlock(block, transactions);
+    pm.stop('blockProposedEventHandler - checkBlock');
     logger.info('Block Checker - Block was valid');
   } catch (err) {
     logger.error('Error detected in block', err);
   }
+  pm.stop('blockProposedEventHandler');
 }
 
 export default blockProposedEventHandler;

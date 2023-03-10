@@ -15,6 +15,7 @@ import generateZkpKeys from './generate-zkp-keys.mjs';
 import x509 from './x509.mjs';
 import transaction from './transaction.mjs';
 import mutex from './mutex.mjs';
+import debug from './debug.mjs';
 
 export {
   transfer,
@@ -34,4 +35,5 @@ export {
   x509,
   transaction,
   mutex,
+  debug,
 };

@@ -6,6 +6,7 @@ import config from 'config';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { enqueueEvent } from '@polygon-nightfall/common-files/utils/event-queue.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import { BlockError, Transaction } from '../classes/index.mjs';
 import {
   getBlockByBlockNumberL2,
@@ -23,7 +24,8 @@ import { checkTransaction } from './transaction-checker.mjs';
 import { workerEnableGet } from '../event-handlers/transaction-submitted.mjs';
 
 const { ZERO } = constants;
-const { optimistTxWorkerUrl, FULL_VERIFICATION_SELF_PROPOSED_BLOCKS } = config.OPTIMIST_TX_WORKER_PARAMS;
+const { optimistTxWorkerUrl, FULL_VERIFICATION_SELF_PROPOSED_BLOCKS } =
+  config.OPTIMIST_TX_WORKER_PARAMS;
 
 /**
  * Check that the leafCount is correct
@@ -39,8 +41,9 @@ async function checkLeafCount(block) {
   if (block.blockNumberL2 > 0) {
     const priorBlock = await getBlockByBlockNumberL2(block.blockNumberL2 - 1);
     if (priorBlock === null) logger.warn('Could not find prior block while checking leaf count');
-    if (priorBlock.leafCount + currentBlock.nCommitments !== block.leafCount)
+    if (priorBlock.leafCount + currentBlock.nCommitments !== block.leafCount) {
       throw new BlockError('The leaf count in the block is not correct', 0);
+    }
   } else if (currentBlock.nCommitments !== block.leafCount) {
     // this throws if it's the first block and leafCount!=0, which is impossible
     throw new BlockError('The leaf count in the block is not correct', 0);
@@ -83,11 +86,12 @@ async function checkBlockRoot(block) {
 async function checkFrontier(block) {
   const tree = await getTreeByBlockNumberL2(block.blockNumberL2);
   const frontierHash = await Block.calcFrontierHash(tree.frontier);
-  if (frontierHash !== block.frontierHash)
+  if (frontierHash !== block.frontierHash) {
     throw new BlockError(
       `The block's frontier hash (${block.frontierHash}) does not match with the frontier corresponding to this block stored in Timber`,
       6,
     );
+  }
 }
 
 // check if there are duplicate commitments in different transactions of the same block
@@ -312,6 +316,7 @@ async function createAndCommitChallenge(err, block) {
     // have the actual challenge to support syncing
     logger.debug(`enqueuing event to stop queue`);
     await enqueueEvent(commitToChallenge, 2, txDataToSign);
+    // TODO -> Dispatch another commitToChallenge to main thread Q2 so that BA stops producing blocks
     await commitToChallenge(txDataToSign);
   } else {
     logger.error(err.stack);
@@ -394,6 +399,7 @@ async function dispatchTransactions(block, transactions) {
  */
 // eslint-disable-next-line import/prefer-default-export
 export async function checkBlock(block, transactions) {
+  pm.start('Check Block');
   try {
     await Promise.all([
       checkLeafCount(block),
@@ -409,12 +415,14 @@ export async function checkBlock(block, transactions) {
   // Check if my proposer build the received block. If so, we can skip transaction processing
   const proposers = (await getAllRegisteredProposers()).map(p => p._id.toLowerCase());
   if (FULL_VERIFICATION_SELF_PROPOSED_BLOCKS !== 'true' && proposers.includes(block.proposer)) {
+    pm.stop('Check Block');
     logger.info('Skipping transaction verification');
     return;
   }
 
   const { error, incorrectTransaction } = await dispatchTransactions(block, transactions);
 
+  pm.stop('Check Block');
   if (error !== null) {
     const newError = await buildBlockErrorMessage(error, block, transactions, incorrectTransaction);
     await createAndCommitChallenge(newError, block);

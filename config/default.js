@@ -66,6 +66,9 @@ module.exports = {
   CONTRACT_ARTIFACTS: process.env.CONTRACT_ARTIFACTS || '/app/build/contracts',
   EXCLUDE_DIRS: 'common',
   MAX_QUEUE: 10,
+  OPTIMIST_BA_WORKER_PARAMS: {
+    optimistBaWorkerUrl: process.env.OPTIMIST_BA_WORKER_URL || 'http://opt-baw',
+  },
   OPTIMIST_TX_WORKER_PARAMS: {
     optimistTxWorkerCount: process.env.OPTIMIST_TX_WORKER_COUNT || 2,
     optimistTxWorkerUrl: process.env.OPTIMIST_TX_WORKER_URL || 'http://opt-txw',

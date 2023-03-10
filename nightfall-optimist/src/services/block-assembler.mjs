@@ -5,12 +5,18 @@
  * from posted transactions and proposes these blocks.
  */
 import WebSocket from 'ws';
+import axios from 'axios';
 import config from 'config';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { waitForTimeout } from '@polygon-nightfall/common-files/utils/utils.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
-import { removeTransactionsFromMemPool, getMempoolTransactionsSortedByFee } from './database.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
+import {
+  removeTransactionsFromMemPool,
+  getMempoolTransactionsSortedByFee,
+  numberOfMempoolTransactions,
+} from './database.mjs';
 import Block from '../classes/block.mjs';
 import { Transaction } from '../classes/index.mjs';
 import {
@@ -21,6 +27,7 @@ import {
 
 const { MAX_BLOCK_SIZE, MINIMUM_TRANSACTION_SLOTS, PROPOSER_MAX_BLOCK_PERIOD_MILIS } = config;
 const { STATE_CONTRACT_NAME } = constants;
+const { optimistBaWorkerUrl } = config.OPTIMIST_BA_WORKER_PARAMS;
 
 let ws;
 let makeNow = false;
@@ -37,6 +44,14 @@ export function setMakeNow(_makeNow = true) {
 
 export function setBlockPeriodMs(timeMs) {
   blockPeriodMs = timeMs;
+}
+
+export async function dispatchSignalRollbackCompleted(data) {
+  try {
+    await axios.post('/rollback-completed', { data });
+  } catch (err) {
+    logger.err({ msg: 'Error dispatching rollback signal to proposer', err });
+  }
 }
 
 /**
@@ -82,6 +97,7 @@ async function sendBlockToProposer(unsignedProposeBlockTransaction, block, trans
       return;
     }
   }
+  pm.start('blockAssembly - blockProposed');
 
   if (ws && ws.readyState === WebSocket.OPEN) {
     await ws.send(
@@ -98,6 +114,22 @@ async function sendBlockToProposer(unsignedProposeBlockTransaction, block, trans
 
     if (ws) logger.debug({ msg: 'Block not sent', socketState: ws.readyState });
     else logger.debug('Block not sent. Non-initialized socket');
+  }
+}
+export async function conditionalMakeBlockDispatch(proposer) {
+  logger.info({ msg: 'DISPATCHING conditionalMakeBlock', optimistBaWorkerUrl, proposer });
+  const nTx = await numberOfMempoolTransactions();
+  logger.info({ msg: 'TX IN MEMPOOL', nTx });
+  try {
+    if (nTx) {
+      await axios.post(`${optimistBaWorkerUrl}/block-assembly`, {
+        proposer,
+      });
+    }
+  } catch (err) {
+    logger.error({ msg: 'ERROR TRYING TO DISPATCH', err });
+  } finally {
+    await waitForTimeout(1000);
   }
 }
 /**
@@ -187,6 +219,7 @@ export async function conditionalMakeBlock(proposer) {
       });
 
       for (let i = 0; i < transactionBatches.length; i++) {
+        pm.start('Block Assembler - New Block');
         // we retrieve un-processed transactions from our local database, relying on
         // the transaction service to keep the database current
 
@@ -197,7 +230,9 @@ export async function conditionalMakeBlock(proposer) {
 
         makeNow = false; // reset the makeNow so we only make one block with a short number of transactions
 
+        pm.start('Block Assembler - makeBlock');
         const block = await makeBlock(proposer.address, transactions);
+        pm.stop('Block Assembler - makeBlock');
 
         const blockSize = mempoolTransactionSizes
           .slice(start, end)
@@ -225,9 +260,11 @@ export async function conditionalMakeBlock(proposer) {
         // remove the transactions from the mempool so we don't keep making new
         // blocks with them
         await removeTransactionsFromMemPool(block.transactionHashes);
+        pm.stop('Block Assembler - New Block');
       }
     }
   }
+  logger.info('No more transactions available');
   // Let's slow down here so we don't slam the database.
-  await waitForTimeout(3000);
+  await waitForTimeout(1000);
 }

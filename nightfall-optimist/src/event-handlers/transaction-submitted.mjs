@@ -6,6 +6,7 @@ import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
@@ -36,6 +37,7 @@ export function workerEnableGet() {
  * @param {Object} eventParams Transaction data
  */
 export async function submitTransaction(eventParams) {
+  pm.start('submitTransaction');
   const { offchain = false, ...data } = eventParams;
   let transaction;
   if (offchain) {
@@ -93,6 +95,7 @@ export async function submitTransaction(eventParams) {
       logger.error(err);
     }
   }
+  pm.stop('submitTransaction');
 }
 
 /**

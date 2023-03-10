@@ -13,6 +13,7 @@ import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import { decompressProof } from '@polygon-nightfall/common-files/utils/curve-maths/curves.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import groth16Verify from '../utils/groth16_verify.mjs';
 import { VerificationKey, Proof, TransactionError } from '../classes/index.mjs';
 import {
@@ -285,6 +286,7 @@ export async function checkTransaction({
   transactionBlockNumberL2,
   lastValidBlockNumberL2,
 }) {
+  pm.start('checkTransaction');
   const [stateConractInstance, shieldContractInstance] = await Promise.all([
     waitForContract(STATE_CONTRACT_NAME),
     waitForContract(SHIELD_CONTRACT_NAME),
@@ -307,6 +309,7 @@ export async function checkTransaction({
     checkHistoricRootBlockNumber(transaction, lastValidBlockNumberL2),
     verifyProof(transaction, stateConractInstance, shieldContractInstance),
   ]);
+  pm.stop('checkTransaction');
 
   return [nonZeroCommitments, nonZeroNullifiers];
 }

@@ -6,6 +6,7 @@ import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { getCircuitHash } from '@polygon-nightfall/common-files/utils/worker-calls.mjs';
 import { getTimeByBlock } from '@polygon-nightfall/common-files/utils/block-utils.mjs';
 import gen from 'general-number';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import {
   markNullifiedOnChain,
   markOnChain,
@@ -120,6 +121,7 @@ export async function processTransactions(
 
 // Write updated sibling info to commitment
 async function updateCommitmentSiblingInfo(blockCommitments, latestTree, updatedTimberRoot) {
+  /*
   const myCommitments = (await getCommitmentsByHash(blockCommitments)).map(c => c._id);
   if (myCommitments.length === 0) return;
 
@@ -138,6 +140,23 @@ async function updateCommitmentSiblingInfo(blockCommitments, latestTree, updated
           blockCommitments,
           i,
           tmpTree,
+        );
+        return setSiblingInfo(c, siblingPath, latestTree.leafCount + i, updatedTimberRoot);
+      }
+    }),
+  );
+  */
+  await Promise.all(
+    // eslint-disable-next-line consistent-return
+    blockCommitments.map(async (c, i) => {
+      const count = await countCommitments([c]);
+      if (count > 0) {
+        const siblingPath = Timber.statelessSiblingPath(
+          latestTree,
+          blockCommitments,
+          i,
+          HASH_TYPE,
+          TIMBER_HEIGHT,
         );
         return setSiblingInfo(c, siblingPath, latestTree.leafCount + i, updatedTimberRoot);
       }
@@ -215,6 +234,7 @@ async function storeTree(latestTree, blockCommitments, transactionHashL1, block,
  * This handler runs whenever a BlockProposed event is emitted by the blockchain
  */
 export async function blockProposedEventHandler(data, syncing) {
+  pm.start('blockProposedEventHandler');
   // zkpPrivateKey will be used to decrypt secrets whilst nullifierKey will be used to calculate nullifiers for commitments and store them
   const { blockNumber: currentBlockCount, transactionHash: transactionHashL1 } = data;
   const { transactions, block } = await getProposeBlockCalldata(data);
@@ -250,6 +270,7 @@ export async function blockProposedEventHandler(data, syncing) {
   let timeBlockL2 = await getTimeByBlock(transactionHashL1);
   timeBlockL2 = new Date(timeBlockL2 * 1000);
 
+  pm.start('blockProposedEventHandler - processTransactions');
   // process transactions in block
   const dbUpdates = await processTransactions(
     transactions,
@@ -258,7 +279,9 @@ export async function blockProposedEventHandler(data, syncing) {
     timeBlockL2,
     data,
   );
+  pm.stop('blockProposedEventHandler - processTransactions');
 
+  pm.start('blockProposedEventHandler - saveBlock');
   await Promise.all(dbUpdates).then(async updateReturn => {
     // only save block if any transaction in it is saved/stored to db
     const saveBlockToDb = updateReturn.map(d => d[0]);
@@ -266,7 +289,9 @@ export async function blockProposedEventHandler(data, syncing) {
       saveBlock({ blockNumber: currentBlockCount, transactionHashL1, timeBlockL2, ...block });
     }
   });
+  pm.stop('blockProposedEventHandler - saveBlock');
 
+  pm.start('blockProposedEventHandler - storeTree');
   // compute and store tree
   const updatedTimber = await storeTree(
     latestTree,
@@ -275,10 +300,16 @@ export async function blockProposedEventHandler(data, syncing) {
     block,
     syncing,
   );
+  pm.start('blockProposedEventHandler - stopTree');
 
+  pm.start('blockProposedEventHandler - updateCommitmentsSiblingInfo');
   // Update sibling information in commitments
   await updateCommitmentSiblingInfo(blockCommitments, latestTree, updatedTimber.root);
+  pm.stop('blockProposedEventHandler - updateCommitmentsSiblingInfo');
 
+  pm.start('blockProposedEventHandler - updateWithdrawalSiblingInfo');
   // update sibling information in withdraw transactions
   await updateWithdrawSiblingInfo(block);
+  pm.stop('blockProposedEventHandler - updateWithdrawalSiblingInfo');
+  pm.stop('blockProposedEventHandler');
 }

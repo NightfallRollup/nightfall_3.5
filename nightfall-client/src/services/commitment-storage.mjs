@@ -23,7 +23,8 @@ const { MONGO_URL, COMMITMENTS_DB, COMMITMENTS_COLLECTION } = config;
 const { clientUrl } = config.CLIENT_TX_WORKER_PARAMS;
 
 const { generalise } = gen;
-const clusterMutex = new ClusterMutex(3000);
+// No mutex timeout
+const clusterMutex = new ClusterMutex(-1);
 
 export async function lockUsableCommitments(compressedZkpPublicKey) {
   const lockReceipt = await clusterMutex.lock(compressedZkpPublicKey);

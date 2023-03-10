@@ -216,7 +216,8 @@ services:
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
-      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw1}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw1}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw1}
     command: ['npm', 'run', 'dev']
 
   opt-txw1:
@@ -293,7 +294,8 @@ services:
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
-      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw2}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw2}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw2}
     command: ['npm', 'run', 'dev']
 
   opt-txw2:

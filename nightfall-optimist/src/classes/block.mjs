@@ -4,6 +4,7 @@ An optimistic layer 2 Block class
 import config from 'config';
 import Timber from '@polygon-nightfall/common-files/classes/timber.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import {
   buildBlockSolidityStruct,
   calcBlockHash,
@@ -125,14 +126,18 @@ class Block {
     const nCommitments = leafValues.length;
 
     // Stateless update our frontier and root
+    pm.start('makeBlock - statelessTimber');
     const updatedTimber = Timber.statelessUpdate(timber, leafValues, HASH_TYPE, TIMBER_HEIGHT);
+    pm.stop('makeBlock - statelessTimber');
     // remember the updated values in case we need them for the next block.
     this.localLeafCount = updatedTimber.leafCount;
     this.localFrontier = updatedTimber.frontier;
     this.localBlockNumberL2 += 1;
     this.localRoot = updatedTimber.root;
 
+    pm.start('makeBlock - txHash');
     const transactionHashesRoot = await this.calcTransactionHashesRoot(transactions);
+    pm.stop('makeBlock - txHash');
     const frontierHash = await this.calcFrontierHash(this.localFrontier);
     // compute the keccak hash of the proposeBlock signature
     const blockHash = this.calcHash({
@@ -184,6 +189,39 @@ class Block {
       ++height;
     }
 
+    /*
+    const timber2 = new Timber(...[, , , ,], TXHASH_TREE_HASH_TYPE, height);
+    const updatedTimber2 = Timber.statelessUpdate(
+      timber2,
+      transactionHashes,
+      TXHASH_TREE_HASH_TYPE,
+      height,
+    );
+
+    const tmpTree = Timber.statelessSiblingPathInit(
+      timber2,
+      transactionHashes,
+      TXHASH_TREE_HASH_TYPE,
+      height,
+    );
+    await Promise.all(
+      // eslint-disable-next-line consistent-return
+      transactionHashes.map(async (t, i) => {
+        const siblingPath = Timber.statelessSiblingPathFinal(
+          timber2,
+          transactionHashes,
+          i,
+          tmpTree,
+        );
+        return setTransactionHashSiblingInfo(
+          t,
+          [updatedTimber2.root, ...siblingPath.path.map(p => p.value).reverse()],
+          timber2.leafCount + i,
+          updatedTimber2.root,
+        );
+      }),
+    );
+   */
     const timber = new Timber(...[, , , ,], TXHASH_TREE_HASH_TYPE, height);
     const updatedTimber = Timber.statelessUpdate(
       timber,
@@ -191,7 +229,6 @@ class Block {
       TXHASH_TREE_HASH_TYPE,
       height,
     );
-
     await Promise.all(
       // eslint-disable-next-line consistent-return
       transactionHashes.map(async (t, i) => {
