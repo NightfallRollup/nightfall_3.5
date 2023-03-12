@@ -39,7 +39,7 @@ const { STATE_CONTRACT_NAME } = constants;
 
 async function initWorkers() {
   if (cluster.isPrimary) {
-    const totalCPUs = Math.min(os.cpus().length - 1, Number(optimistTxWorkerCount));
+    const totalCPUs = Math.min(os.cpus().length, Number(optimistTxWorkerCount));
 
     logger.info(`Number of CPUs is ${totalCPUs}`);
 

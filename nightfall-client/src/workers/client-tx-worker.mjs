@@ -21,7 +21,7 @@ const { clientTxWorkerCount } = config.CLIENT_TX_WORKER_PARAMS;
 
 async function initWorkers() {
   if (cluster.isPrimary) {
-    const totalCPUs = Math.min(os.cpus().length - 1, Number(clientTxWorkerCount));
+    const totalCPUs = Math.min(os.cpus().length, Number(clientTxWorkerCount));
 
     logger.info(`Number of CPUs is ${totalCPUs}`);
 
