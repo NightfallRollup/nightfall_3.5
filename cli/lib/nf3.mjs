@@ -55,9 +55,10 @@ const liquidityProviderQueue = createQueue({ autostart: true, concurrency: 1 });
 Creates a new Nightfall_3 library instance.
 @param {string} clientBaseUrl - The base url for nightfall-client
 @param {string} clientBaseTxUrl - The base url for nightfall-client Transactions and commitments API
-@param {string} clientBaseVkUrl - The base url for nightfall-client Viewing Key API
+@param {string} clientBaseBpUrl - The base url for nightfall-client Block Proposed Worker API
 @param {string} optimistBaseUrl - The base url for nightfall-optimist
 @param {string} optimistWsUrl - The webscocket url for nightfall-optimist
+@param {string} optimistWsBaUrl - The webscocket url for nightfall-optimist BA Worker
 @param {string} web3WsUrl - The websocket url for the web3js client
 @param {string} ethereumSigningKey - the Ethereum siging key to be used for transactions (hex string).
 @param {object} zkpKeys - An object containing the zkp keys to use.  These will be auto-generated if left undefined.
@@ -65,9 +66,17 @@ Creates a new Nightfall_3 library instance.
 class Nf3 {
   clientBaseUrl;
 
+  clientBaseTxUrl;
+
+  clientBaseBpUrl;
+
   optimistBaseUrl;
 
+  optimistBaseBaUrl;
+
   optimistWsUrl;
+
+  optimistWsBaUrl;
 
   web3WsUrl;
 
@@ -124,9 +133,11 @@ class Nf3 {
     environment = {
       clientApiUrl: 'http://localhost:8080',
       clientApiTxUrl: 'http://localhost:3010',
-      clientApiVkUrl: 'http://localhost:3020',
+      clientApiBpUrl: 'http://localhost:3020',
       optimistApiUrl: 'http://localhost:8081',
+      optimistApiBaUrl: 'http://localhost:3030',
       optimistWsUrl: 'ws://localhost:8082',
+      optimistWsBaUrl: 'ws://localhost:3031',
       web3WsUrl: 'ws://localhost:8546',
     },
     zkpKeys,
@@ -134,9 +145,11 @@ class Nf3 {
   ) {
     this.clientBaseUrl = environment.clientApiUrl;
     this.clientBaseTxUrl = environment.clientApiTxUrl;
-    this.clientBaseVkUrl = environment.clientApiVkUrl;
+    this.clientBaseBpUrl = environment.clientApiBpUrl;
     this.optimistBaseUrl = environment.optimistApiUrl;
+    this.optimistBaseBaUrl = environment.optimistApiBaUrl;
     this.optimistWsUrl = environment.optimistWsUrl;
+    this.optimistWsBaUrl = environment.optimistWsBaUrl;
     this.web3WsUrl = environment.web3WsUrl;
     this.ethereumSigningKey = ethereumSigningKey;
     this.zkpKeys = zkpKeys;
@@ -305,8 +318,7 @@ class Nf3 {
   @async
   */
   async makeBlockNow() {
-    //return axios.post(`${this.optimistBaseUrl}/block/make-now`);
-    return axios.post(`http://localhost:3030/block/make-now`);
+    return axios.post(`${this.optimistBaseBaUrl}/block/make-now`);
   }
 
   async estimateGas(contractAddress, unsignedTransaction) {
@@ -960,7 +972,7 @@ class Nf3 {
     with the makeKeys function).
     */
   async subscribeToIncomingViewingKeys() {
-    return axios.post(`${this.clientBaseVkUrl}/incoming-viewing-key`, {
+    return axios.post(`${this.clientBaseBpUrl}/incoming-viewing-key`, {
       zkpPrivateKeys: [this.zkpKeys.zkpPrivateKey],
       nullifierKeys: [this.zkpKeys.nullifierKey],
     });
@@ -1248,8 +1260,7 @@ class Nf3 {
     */
   async startProposer() {
     const proposeEmitter = this.createEmitter();
-    //const connection = new ReconnectingWebSocket(this.optimistWsUrl, [], { WebSocket });
-    const connection = new ReconnectingWebSocket('ws://localhost:3031', [], { WebSocket });
+    const connection = new ReconnectingWebSocket(this.optimistWsBaUrl, [], { WebSocket });
 
     this.websockets.push(connection); // save so we can close it properly later
 
@@ -1293,8 +1304,7 @@ class Nf3 {
 
             // block proposed is reverted. Send transactions back to mempool
             try {
-              //await axios.get(`${this.optimistBaseUrl}/block/reset-localblock`);
-              await axios.get(`http://localhost:3030/block/reset-localblock`);
+              await axios.get(`${this.optimistBaseBaUrl}/block/reset-localblock`);
             } catch (errorResetLocalBlock) {
               logger.error({
                 msg: 'Error while trying to reset local block',

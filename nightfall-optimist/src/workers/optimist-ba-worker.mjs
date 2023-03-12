@@ -59,7 +59,7 @@ async function initWorkers() {
     }
   });
 
-  app.post('/rollback-completedy', async (req, res, next) => {
+  app.post('/rollback-completed', async (req, res, next) => {
     const { data } = req.body;
     try {
       await signalRollbackCompleted(data);
@@ -69,17 +69,6 @@ async function initWorkers() {
       next(err);
     }
   });
-/*
-  app.post('/block/make-now', async (req, res, next) => {
-    try {
-      logger.debug(`block make-now endpoint received GET`);
-      setMakeNow();
-      res.send('Making short block');
-    } catch (err) {
-      next(err);
-    }
-  });
-  */
 
   setupHttpDefaults(
     app,

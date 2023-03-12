@@ -1,4 +1,47 @@
 # nightfall-optimist
+## Architecture
+Nightfall optimist is build by 4 separate services + a mongo DB
+
+### Event Handler
+Event handler service (aka, optimist) receives and processes the following events from Blockchain:
+- TransactionSubmitted
+- Rollback
+- CommittedToChallenge
+- NewCurrentProposer
+- InstantWithdrawalRequested
+
+Additionally, it manages access to the following API endpoints:
+- /challenger
+- /transaction
+- /contract-address
+- /contract-abi
+- /debug
+- /workers
+
+### Transaction worker cluster
+Transaction worker is a cluster that manages transaction processing.  It receives requests to generate
+different transactions, either onchain transactions requests from optimist or offchain transactions requests from proposers. It also provides a service to verify transactions received via `Block Proposed` event
+
+Transaction worker cluster exports the following API endpoints:
+- /proposer/offchain-transaction
+- /workers/transaction-submitted
+- /workers/check-transaction
+- /debug
+
+### Block Proposed worker
+Block Proposed worker receives and processes `Block Proposed` events from Blockchain. Actions from `Block Proposed` events include processing received blocks and transactions. Block Proposed worker dispatches transactions received to `Transaction Worker` cluster.
+
+Block Proposed worker exports the following API endpoints:
+- /debug
+
+### Block Assblebly worker
+Block Assembly worker generates blocks whenever there are enough transactions in the mempool. It sends the proposer the newly assembled blocks so that they can be proposed.
+
+Block Assembly worker exports the following API endpoints:
+- /block-assembly
+- /rollback-completed
+- /block
+- /debug
 
 ## Requirements
 
@@ -24,6 +67,9 @@ generated during deployment are left in some server so that they can be download
 
 Optimist is configured using `docker/docker-compose.optimist.yml`. To deploy a full Optimist, three services are launched:
 - **optimist** 
+- **opt-txw**
+- **opt-bpw**
+- **opt-baw**
 - **mongodb**
 
 ### Configuration 

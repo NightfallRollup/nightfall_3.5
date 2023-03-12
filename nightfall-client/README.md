@@ -8,6 +8,45 @@
 
 # nightfall-client
 
+## Architecture
+Nightfall client is build by 4 separate services + a mongo DB
+
+### Event Handler
+Event handler service (aka, client) receives and processes `Rollback` events from Blockchain. Additionally, it manages access to the following API endpoints:
+- /contract-address
+- /contract-abi
+- /finalise-withdrawal
+- /valid-withdrawal
+- /set-instant-withdrawal
+- /generate-zkp-keys
+- /x509
+- /mutex
+- /debug
+
+
+### Transaction worker cluster
+Transaction worker is a cluster that manages transaction processing.  It receives requests to generate
+different transactions, and contacts the circom worker cluster to build the ZK proofs. Transaction worker cluster manages the following API endpoints:
+- /withdraw
+- /tokenise
+- /burn
+- /transform
+- /commitment
+- /transaction
+- /deposit
+- /transfer
+- /debug
+
+### Circom worker cluster
+Circom worker is a cluster that handles all ZK related processing, including computation of proofs and witnesses. It presents an internal API that its called by the transaction worker cluster to request
+transaction ZK proofs.
+
+### Block Proposer worker
+Block Proposed worker receives and processes `Block Proposed` events from Blockchain. Actions from `Block Proposed` events include processing received block and decryption of commitments. Additionally, it manages access to the following API endpoints:
+- /incoming-viewing-key
+- /debug
+
+
 ## Requirements
 
 This application runs in docker containers so you will need Docker installed and Docker Compose
@@ -32,6 +71,8 @@ generated during deployment are left in some server so that they can be download
 
 Client is configured using `docker/docker-compose.client.yml`. To deploy a full Client, three services are launched:
 - **client** 
+- **client-txw** 
+- **client-bpw** 
 - **worker** 
 - **mongodb**
 
