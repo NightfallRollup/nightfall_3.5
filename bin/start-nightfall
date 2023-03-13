@@ -34,9 +34,9 @@ while [ -n "$1" ]; do
                                     ;;
       -a  | --adversary)            ADVERSARY="-f docker/docker-compose.adversary.yml"
                                     ;;
-      -n  | --nothing)              FILE="-f docker/docker-compose.yml" 
+      -n  | --nothing)              FILE="-f docker/docker-compose.yml"
                                     NO_REMOVE='true'
-                                    ;;                              
+                                    ;;
       * )                           usage
                               exit 1
     esac
@@ -50,7 +50,7 @@ if [ -z "$FILE" ]; then
 fi
 
 # shut down cleanly in the event of a cntl-c etc. We don't want to leave containers running
-trap "docker-compose $FILE $DEV $ADVERSARY -p 'nightfall_3' down --remove-orphans -t 1; exit 1" SIGHUP SIGINT SIGTERM
+trap "docker-compose $FILE $DEV $ADVERSARY -p 'nightfall_3' down -v --remove-orphans -t 1; exit 1" SIGHUP SIGINT SIGTERM
 
 docker-compose -f docker/docker-compose.yml $FILE $DEV $ADVERSARY -p 'nightfall_3' down --remove-orphans
 
@@ -60,7 +60,7 @@ if [[ $(echo $VOLUME_LIST | grep nightfall_3_mongodb) ]]; then
   docker volume rm nightfall_3_mongodb
 fi
 
-if [ -z "$NO_REMOVE" ]; then 
+if [ -z "$NO_REMOVE" ]; then
 
   if [[ $(echo $VOLUME_LIST | grep nightfall_3_mongodb2) ]]; then
     echo -n 'Removing '
