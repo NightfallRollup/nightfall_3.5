@@ -3,7 +3,7 @@ import chai from 'chai';
 import config from 'config';
 import chaiHttp from 'chai-http';
 import chaiAsPromised from 'chai-as-promised';
-import { UserFactory } from 'nightfall-sdk';
+// import { UserFactory } from 'nightfall-sdk';
 import Nf3 from '../../../cli/lib/nf3.mjs';
 
 // so we can use require with mjs file
@@ -29,6 +29,7 @@ before(async () => {
 });
 
 describe('Health and Contract Checks', () => {
+  // TODO : Removed nightfall sdk as its still incompatible with new architecture
   /*
   it('new sdk should respond with "true" the health check', async function () {
     const status = await user.isClientAlive();
