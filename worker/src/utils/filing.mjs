@@ -59,17 +59,6 @@ export const deleteFile = async filePath => {
   );
 };
 
-export const readJsonFile = filePath => {
-  if (fs.existsSync(filePath)) {
-    const file = fs.readFileSync(filePath);
-    return JSON.parse(file);
-  }
-
-  logger.warn({ msg: 'Unable to locate file', filePath });
-
-  return null;
-};
-
 export const getFilesRecursively = (dir, fileList = []) => {
   const files = fs.readdirSync(dir);
 
