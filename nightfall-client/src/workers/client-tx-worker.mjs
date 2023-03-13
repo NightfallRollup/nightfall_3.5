@@ -1,4 +1,5 @@
 /* eslint no-shadow: "off" */
+/* ignore unused exports */
 import express from 'express';
 import cluster from 'cluster';
 import config from 'config';

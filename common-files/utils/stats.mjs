@@ -1,3 +1,4 @@
+/* ignore unused exports */
 import PerformanceBenchmark from './performance-benchmark.mjs';
 
 const pm = new PerformanceBenchmark();

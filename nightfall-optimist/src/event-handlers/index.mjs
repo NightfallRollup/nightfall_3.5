@@ -1,3 +1,4 @@
+/* ignore unused exports */
 import {
   startEventQueue,
   subscribeToBlockAssembledWebSocketConnection,

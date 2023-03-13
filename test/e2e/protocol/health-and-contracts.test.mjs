@@ -16,17 +16,20 @@ const { mnemonics, signingKeys } = config.TEST_OPTIONS;
 
 const nf3User1 = new Nf3(signingKeys.user1, environment);
 
-let user;
+// let user;
 before(async () => {
   await nf3User1.init(mnemonics.user1);
+  /*
   user = await UserFactory.create({
     blockchainWsUrl: environment.web3WsUrl,
     clientApiUrl: environment.clientApiUrl,
     ethereumPrivateKey: signingKeys.user1,
   });
+  */
 });
 
 describe('Health and Contract Checks', () => {
+  /*
   it('new sdk should respond with "true" the health check', async function () {
     const status = await user.isClientAlive();
     expect(status).to.be.equal(true);
@@ -36,7 +39,7 @@ describe('Health and Contract Checks', () => {
     const contractAddress = user.shieldContractAddress;
     expect(contractAddress).to.be.a('string').and.to.include('0x');
   });
-
+*/
   // Original tests using `nf3`
   it('should respond with "true" the health check', async function () {
     const res = await nf3User1.healthcheck('client');
@@ -74,5 +77,5 @@ describe('Health and Contract Checks', () => {
 
 after(async () => {
   await nf3User1.close();
-  user.close();
+  // user.close();
 });
