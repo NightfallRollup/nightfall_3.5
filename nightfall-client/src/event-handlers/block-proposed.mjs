@@ -35,10 +35,6 @@ const { ZERO, WITHDRAW } = constants;
 
 const { generalise } = gen;
 
-const circuitHash = await getCircuitHash(WITHDRAW);
-
-const withdrawCircuitHash = generalise(circuitHash).hex(32);
-
 // Stores latest L1 block correctly synchronized to speed possible resyncs
 let lastInOrderL1Block = 'earliest';
 // Counter to monitor resync attempts in case something is wrong we can force a
@@ -176,6 +172,10 @@ async function updateWithdrawSiblingInfo(block) {
   while (2 ** height < block.transactionHashes.length) {
     ++height;
   }
+
+  const circuitHash = await getCircuitHash(WITHDRAW);
+
+  const withdrawCircuitHash = generalise(circuitHash).hex(32);
 
   const withdrawTransactionHashes = (
     await getCircuitTransactionsByHash(block.transactionHashes, withdrawCircuitHash)
