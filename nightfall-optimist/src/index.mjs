@@ -8,22 +8,16 @@ import { checkContractsABI } from '@polygon-nightfall/common-files/utils/sync-fi
 import app from './app.mjs';
 import {
   startEventQueue,
-  subscribeToBlockAssembledWebSocketConnection,
   subscribeToChallengeWebSocketConnection,
   subscribeToInstantWithDrawalWebSocketConnection,
-  subscribeToProposedBlockWebSocketConnection,
   eventHandlers,
 } from './event-handlers/index.mjs';
 import Proposer from './classes/proposer.mjs';
-import {
-  setBlockAssembledWebSocketConnection,
-  conditionalMakeBlock,
-} from './services/block-assembler.mjs';
+import { conditionalMakeBlockDispatch } from './services/block-assembler.mjs';
 import { setChallengeWebSocketConnection } from './services/challenges.mjs';
 import { initialBlockSync } from './services/state-sync.mjs';
 import { setInstantWithdrawalWebSocketConnection } from './services/instant-withdrawal.mjs';
 import { setProposer } from './routes/proposer.mjs';
-import { setBlockProposedWebSocketConnection } from './event-handlers/block-proposed.mjs';
 
 const main = async () => {
   try {
@@ -32,10 +26,8 @@ const main = async () => {
     setProposer(proposer); // passes the proposer instance int the proposer routes
 
     // subscribe to WebSocket events first
-    await subscribeToBlockAssembledWebSocketConnection(setBlockAssembledWebSocketConnection);
     await subscribeToChallengeWebSocketConnection(setChallengeWebSocketConnection);
     await subscribeToInstantWithDrawalWebSocketConnection(setInstantWithdrawalWebSocketConnection);
-    await subscribeToProposedBlockWebSocketConnection(setBlockProposedWebSocketConnection);
     await startEventQueue(queueManager, eventHandlers, proposer);
 
     // enqueue the block-assembler every time the queue becomes empty
@@ -43,12 +35,20 @@ const main = async () => {
       // We do the proposer isMe check here to fail fast instead of re-enqueing.
       // We check if the queue[2] is empty, this is safe it is manually enqueued/dequeued.
       if (proposer.isMe && queues[2].length === 0) {
-        // logger.debug('Queue has emptied. Queueing block assembler.');
-        return enqueueEvent(conditionalMakeBlock, 0, proposer);
+        logger.info('Queue has emptied. Queueing block assembler.');
+        return enqueueEvent(conditionalMakeBlockDispatch, 0, proposer);
       }
       // eslint-disable-next-line no-void, no-useless-return
       return void false; // This is here to satisfy consistent return rules, we do nothing.
     });
+
+    /*
+    setTimeout(() => {
+      if (proposer.isMe && queues[2].length === 0) {
+        enqueueEvent(conditionalMakeBlock, 0, proposer);
+      }
+    }, 2000);
+    */
 
     /*
      We enqueue a message so that we can actualy trigger the queue.end call even if we havent received anything.

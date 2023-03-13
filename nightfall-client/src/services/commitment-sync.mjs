@@ -17,48 +17,55 @@ import Commitment from '../classes/commitment.mjs';
 const { ZERO } = constants;
 
 /**
+decrypt commitments for a transaction given a single zkpPrivateKey and nullifierKey.
+*/
+function decryptCommitmentSingle(transaction, zkpPrivateKey, nullifierKey, nonZeroCommitments) {
+  const { zkpPublicKey } = ZkpKeys.calculateZkpPublicKey(generalise(zkpPrivateKey));
+  try {
+    const cipherTexts = [
+      transaction.ercAddress,
+      transaction.recipientAddress, // It contains the tokenID encrypted (which is a field)
+      ...transaction.compressedSecrets,
+    ];
+    const [packedErc, unpackedTokenID, ...rest] = decrypt(
+      generalise(zkpPrivateKey),
+      generalise(edwardsDecompress(transaction.tokenId)), // Compressed public key is stored in token ID
+      generalise(cipherTexts),
+    );
+    const [erc, tokenId] = packSecrets(generalise(packedErc), generalise(unpackedTokenID), 2, 0);
+    const plainTexts = generalise([erc, tokenId, ...rest]);
+    const commitment = new Commitment({
+      zkpPublicKey,
+      ercAddress: plainTexts[0].bigInt,
+      tokenId: plainTexts[1].bigInt,
+      value: plainTexts[2].bigInt,
+      salt: plainTexts[3].bigInt,
+    });
+    if (commitment.hash.hex(32) === nonZeroCommitments) {
+      logger.info({
+        msg: 'Commitment successfully decrypted for this recipient',
+        commitment,
+        transactionHash: transaction.transactionHash,
+      });
+      return storeCommitment(commitment, nullifierKey);
+    }
+  } catch (err) {
+    // This error will be caught regularly if the commitment isn't for us
+    // We dont print anything in order not to pollute the logs
+  }
+  return null;
+}
+
+/**
 decrypt commitments for a transaction given zkpPrivateKeys and nullifierKeys.
 */
 export async function decryptCommitment(transaction, zkpPrivateKey, nullifierKey) {
   const nonZeroCommitments = transaction.commitments.flat().filter(n => n !== ZERO);
-  const storeCommitments = [];
-  zkpPrivateKey.forEach((key, j) => {
-    const { zkpPublicKey } = ZkpKeys.calculateZkpPublicKey(generalise(key));
-    try {
-      const cipherTexts = [
-        transaction.ercAddress,
-        transaction.recipientAddress, // It contains the tokenID encrypted (which is a field)
-        ...transaction.compressedSecrets,
-      ];
-      const [packedErc, unpackedTokenID, ...rest] = decrypt(
-        generalise(key),
-        generalise(edwardsDecompress(transaction.tokenId)), // Compressed public key is stored in token ID
-        generalise(cipherTexts),
-      );
-      const [erc, tokenId] = packSecrets(generalise(packedErc), generalise(unpackedTokenID), 2, 0);
-      const plainTexts = generalise([erc, tokenId, ...rest]);
-      const commitment = new Commitment({
-        zkpPublicKey,
-        ercAddress: plainTexts[0].bigInt,
-        tokenId: plainTexts[1].bigInt,
-        value: plainTexts[2].bigInt,
-        salt: plainTexts[3].bigInt,
-      });
-      if (commitment.hash.hex(32) === nonZeroCommitments[0]) {
-        logger.info({
-          msg: 'Commitment successfully decrypted for this recipient',
-          commitment,
-          transactionHash: transaction.transactionHash,
-        });
-        storeCommitments.push(storeCommitment(commitment, nullifierKey[j]));
-      }
-    } catch (err) {
-      // This error will be caught regularly if the commitment isn't for us
-      // We dont print anything in order not to pollute the logs
-    }
-  });
+  const storeCommitments = zkpPrivateKey.map((key, j) =>
+    decryptCommitmentSingle(transaction, key, nullifierKey[j], nonZeroCommitments[0]),
+  );
 
-  const commitmentsStored = await Promise.all(storeCommitments);
+  const commitmentsStored = await Promise.all(storeCommitments.filter(c => c !== null));
   if (commitmentsStored.length > 0) {
     return true;
   }

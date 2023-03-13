@@ -318,6 +318,7 @@ export const getCommitmentInfo = async txInfo => {
     const commitmentTreeInfo = await Promise.all(
       [...oldCommitments, ...oldCommitmentsFee].map(c => getSiblingInfo(c)),
     );
+
     const localSiblingPaths = commitmentTreeInfo.map(l => {
       const path = l.siblingPath.path.map(p => p.value);
       return generalise([l.root].concat(path.reverse()));

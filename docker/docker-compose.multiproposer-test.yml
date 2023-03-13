@@ -216,7 +216,40 @@ services:
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw1}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw1}
     command: ['npm', 'run', 'dev']
+
+  opt-txw1:
+    build:
+      dockerfile: docker/optimist.Dockerfile
+      context: ..
+    container_name: opt_txw_1
+    depends_on:
+      - optimist_mongodb_1
+    networks:
+      - nightfall_network
+    ports:
+      - 3000:80
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build/
+    environment:
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      HASH_TYPE: poseidon
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://optimist_mongodb_1:27017}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   proposer_optimist_2:
     build:
@@ -261,7 +294,40 @@ services:
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw2}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw2}
     command: ['npm', 'run', 'dev']
+
+  opt-txw2:
+    build:
+      dockerfile: docker/optimist.Dockerfile
+      context: ..
+    container_name: opt_txw_2
+    depends_on:
+      - optimist_mongodb_2
+    networks:
+      - nightfall_network
+    ports:
+      - 3010:80
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build/
+    environment:
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      HASH_TYPE: poseidon
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://optimist_mongodb_2:27017}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      OPTMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   optimist_mongodb_1:
     image: mongo:4.4.1-bionic

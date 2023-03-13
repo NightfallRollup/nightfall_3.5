@@ -13,9 +13,9 @@ router.get('/', async (req, res, next) => {
 
     logger.debug({ msg: 'Returning circuit hash', circuitHash });
 
-    return res.send(circuitHash);
+    res.json({ circuitHash });
   } catch (err) {
-    return next(err);
+    next(err);
   }
 });
 

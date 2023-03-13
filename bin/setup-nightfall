@@ -56,3 +56,23 @@ fi
 if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"worker"* ]]; then
   docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} worker
 fi
+
+if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"opt-txw"* ]]; then
+  docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} opt-txw
+fi
+
+if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"client-txw"* ]]; then
+  docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} client-txw
+fi
+
+if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"client-bpw"* ]]; then
+  docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} client-bpw
+fi
+
+if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"opt-bpw"* ]]; then
+  docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} opt-bpw
+fi
+
+if [[ -z "${NF_SERVICES_TO_START}" || "${NF_SERVICES_TO_START}" == *"opt-baw"* ]]; then
+  docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml build ${NO_CACHE_FLAG} opt-baw
+fi

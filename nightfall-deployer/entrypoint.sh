@@ -6,6 +6,7 @@ if [ -z "${ETH_PRIVATE_KEY}" ]; then
   # wait until there's a blockchain client up
   while ! nc -z ${BLOCKCHAIN_WS_HOST} ${BLOCKCHAIN_PORT}; do sleep 3; done
 fi
+while ! nc -z ${CIRCOM_WORKER_HOST} 80; do sleep 3; done
 
 if [[ "${SKIP_DEPLOYMENT}" != "true" && "${PARALLEL_SETUP}" == "false" ]]; then
   echo "PARALLEL SETUP DISABLED...."

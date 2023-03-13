@@ -14,6 +14,8 @@ import setInstantWithdrawl from './instant-withdrawal.mjs';
 import generateZkpKeys from './generate-zkp-keys.mjs';
 import x509 from './x509.mjs';
 import transaction from './transaction.mjs';
+import mutex from './mutex.mjs';
+import debug from './debug.mjs';
 
 export {
   transfer,
@@ -32,4 +34,6 @@ export {
   generateZkpKeys,
   x509,
   transaction,
+  mutex,
+  debug,
 };

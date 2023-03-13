@@ -8,6 +8,7 @@
 import config from 'config';
 import gen from 'general-number';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import {
   edwardsCompress,
   compressProof,
@@ -31,6 +32,7 @@ const { SHIELD_CONTRACT_NAME, TRANSFER } = constants;
 const { generalise } = gen;
 
 async function transfer(transferParams) {
+  pm.start('transfer');
   logger.info('Creating a transfer transaction');
   // let's extract the input items
   const {
@@ -64,6 +66,7 @@ async function transfer(transferParams) {
   const circuitName = TRANSFER;
 
   const totalValueToSend = values.reduce((acc, value) => acc + value.bigInt, 0n);
+  pm.start('transfer - getCommitmentInfo');
   const commitmentsInfo = await getCommitmentInfo({
     totalValueToSend,
     fee,
@@ -76,9 +79,11 @@ async function transfer(transferParams) {
     providedCommitments,
     providedCommitmentsFee,
   });
+  pm.stop('transfer - getCommitmentInfo');
 
   try {
     // KEM-DEM encryption
+    pm.start('transfer - encrypt');
     const [ePrivate, ePublic] = await genEphemeralKeys();
     const [unpackedTokenID, packedErc] = packSecrets(tokenId, ercAddress, 0, 2);
     const compressedSecrets = encrypt(generalise(ePrivate), generalise(recipientZkpPublicKeys[0]), [
@@ -87,9 +92,12 @@ async function transfer(transferParams) {
       values[0].bigInt,
       commitmentsInfo.salts[0].bigInt,
     ]);
+    pm.stop('transfer - encrypt');
 
     // Compress the public key as it will be put on-chain
+    pm.start('transfer - adwardsCompress');
     const compressedEPub = edwardsCompress(ePublic);
+    pm.stop('transfer - adwardsCompress');
 
     const circuitHash = await getCircuitHash(circuitName);
 
@@ -125,6 +133,7 @@ async function transfer(transferParams) {
       ephemeralKey: ePrivate,
     };
 
+    pm.start('transfer - computeInputs');
     const witness = computeCircuitInputs(
       publicData,
       privateData,
@@ -133,14 +142,17 @@ async function transfer(transferParams) {
       VK_IDS[circuitName].numberNullifiers,
       VK_IDS[circuitName].numberCommitments,
     );
+    pm.stop('transfer - computeInputs');
 
     logger.debug({
       msg: 'witness input is',
       witness,
     });
 
+    pm.start('transfer - generateProof');
     // call a worker to generate the proof
     const res = await generateProof({ folderpath: circuitName, witness });
+    pm.stop('transfer - generateProof');
 
     logger.trace({
       msg: 'Received response from generate-proof',
@@ -149,8 +161,12 @@ async function transfer(transferParams) {
 
     const { proof } = res.data;
     // and work out the ABI encoded data that the caller should sign and send to the shield contract
+    pm.start('transfer - compressProof');
     const transaction = { ...publicData, proof: compressProof(proof) };
+    pm.stop('transfer - compressProof');
+    pm.start('transfer - txCalcHash');
     transaction.transactionHash = Transaction.calcHash(transaction);
+    pm.stop('transfer - txCalcHash');
 
     logger.debug({
       msg: `Client made ${circuitName}`,
@@ -169,8 +185,16 @@ async function transfer(transferParams) {
       offchain,
     );
 
+    pm.stop('transfer');
     return { rawTransaction, transaction };
   } catch (error) {
+    pm.stop('transfer - encrypt');
+    pm.stop('transfer');
+    pm.stop('transfer - encrypt');
+    pm.stop('transfer - computeInputs');
+    pm.stop('transfer - txCalcHash');
+    pm.stop('transfer - compressProof');
+    pm.stop('transfer - generateProof');
     await Promise.all(commitmentsInfo.oldCommitments.map(o => clearPending(o)));
     logger.error(error);
     throw error;

@@ -27,7 +27,7 @@ import {
   findBlocksByProposer,
   getBlockByBlockHash,
 } from '../services/database.mjs';
-import transactionSubmittedEventHandler from '../event-handlers/transaction-submitted.mjs';
+import { transactionSubmittedEventHandler } from '../event-handlers/transaction-submitted.mjs';
 
 const router = express.Router();
 const { TIMBER_HEIGHT, HASH_TYPE } = config;

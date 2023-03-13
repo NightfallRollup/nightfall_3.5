@@ -41,8 +41,50 @@ services:
       # we don't want adversary who create bad block to be challenger as well
       # so for adversary default is false unlike optimist
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
+      FULL_VERIFICATION_SELF_PROPOSED_BLOCKS: 'false'
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
+      TX_WORKER_URL: http://adversary-txw
     command: ['npm', 'run', 'dev']
+
+  adversary-txw:
+    build:
+      dockerfile: docker/opt_txw.Dockerfile
+      context: ..
+    image: opt-txw:latest
+    depends_on:
+      - mongodb-adversary
+    networks:
+      - nightfall_network
+    ports:
+      - 3010:80
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build/
+      - type: bind
+        source: ../test/adversary/lazy-optimist/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /app/config/default.js
+    environment:
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      HASH_TYPE: poseidon
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${MONGO_URL:-mongodb://mongodb-adversary:27017}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker'] 
 
   bad-client:
     build:
