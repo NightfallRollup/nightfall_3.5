@@ -551,7 +551,7 @@ export const clearMempool = async ({ optimistUrl, web3, logs }) => {
   ).length;
   while (transactionsMempool > 0) {
     console.log(`Transactions still in the mempool: ${transactionsMempool}`);
-    //await axios.post(`${optimistUrl}/block/make-now`);
+    // await axios.post(`${optimistUrl}/block/make-now`);
     await axios.post(`http://localhost:3030/block/make-now`);
     await web3.waitForEvent(logs, ['blockProposed']);
     transactionsMempool = (await axios.get(`${optimistUrl}/proposer/mempool`)).data.result.filter(

@@ -11,7 +11,7 @@ import {
   markNullifiedOnChain,
   markOnChain,
   countCommitments,
-  getCommitmentsByHash,
+  // getCommitmentsByHash,
   countNullifiers,
   setSiblingInfo,
   getCircuitTransactionsByHash,
