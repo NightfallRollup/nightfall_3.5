@@ -292,9 +292,12 @@ module.exports = {
     aws: {
       name: 'AWS',
       chainId: 1337,
-      clientApiUrl: `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`,
-      clientApiTxUrl: `http://${process.env.CLIENT_TX_WORKER_HOST}:${process.env.CLIENT_PORT}`,
-      clientApiBpUrl: `http://${process.env.CLIENT_BP_WORKER_HOST}:${process.env.CLIENT_PORT}`,
+      clientApiUrl:
+        process.env.CLIENT_URL || 'http://localhost:8080',
+      clientApiTxUrl:
+        process.env.CLIENT_TX_WORKER_URL || 'http://localhost:3010',
+      clientApiBpUrl:
+        process.env.CLIENT_BP_WORKER_URL || 'http//localhost:3020',
       optimistApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
       optimistWsUrl: `wss://${process.env.OPTIMIST_HOST}`,
       optimistWsBaUrl: `wss://${process.env.OPTIMIST_BA_WORKER_WS_HOST}`,
