@@ -4,9 +4,9 @@ async function callInput(input, circuit) {
   const res = await axios.post(`http://localhost:9080/input/${circuit}`, input);
   if (res.status === 200) {
     return true;
-  } else {
-    throw new Error(res.status);
   }
+
+  throw new Error(res.status);
 }
 
 async function getStatus() {
@@ -26,8 +26,8 @@ export default async function generateProof(input, circuit) {
   await callInput(input, circuit);
   let st;
   st = await getStatus();
-  while (st.status == 'busy') {
-    st = await getStatus();
+  while (st.status === 'busy') {
+    st = await getStatus(); // eslint-disable-line no-await-in-loop
   }
 
   const proof = JSON.parse(st.proof);
