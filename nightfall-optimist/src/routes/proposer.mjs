@@ -24,7 +24,7 @@ import {
   getMempoolTransactions,
   getMempoolTransactionByL2TransactionHash,
   getLatestTree,
-  findBlocksByProposer,
+  getFindBlocksByProposerPagination,
   getBlockByBlockHash,
 } from '../services/database.mjs';
 import transactionSubmittedEventHandler from '../event-handlers/transaction-submitted.mjs';
@@ -193,30 +193,38 @@ router.get('/pending-payments', async (req, res, next) => {
   const pendingPayments = [];
   // get blocks by proposer
   try {
-    const blocks = await findBlocksByProposer(proposerAddress.toLowerCase());
     const shieldContractInstance = await getContractInstance(SHIELD_CONTRACT_NAME);
+    const findBlocksByProposerPagination = await getFindBlocksByProposerPagination(
+      proposerAddress.toLowerCase(),
+    );
 
-    for (let i = 0; i < blocks.length; i++) {
-      let pending;
-      let challengePeriod = false;
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        pending = await shieldContractInstance.methods
-          .isBlockPaymentPending(blocks[i].blockNumberL2)
-          .call();
-      } catch (e) {
-        if (e.message.includes('Too soon to get paid for this block')) {
-          challengePeriod = true;
-          pending = true;
-        } else {
-          pending = false;
+    for (const pagePromise of findBlocksByProposerPagination) {
+      // eslint-disable-next-line no-await-in-loop
+      const blocks = await pagePromise();
+
+      for (let i = 0; i < blocks.length; i++) {
+        let pending;
+        let challengePeriod = false;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          pending = await shieldContractInstance.methods
+            .isBlockPaymentPending(blocks[i].blockNumberL2)
+            .call();
+        } catch (e) {
+          if (e.message.includes('Too soon to get paid for this block')) {
+            challengePeriod = true;
+            pending = true;
+          } else {
+            pending = false;
+          }
+        }
+
+        if (pending) {
+          pendingPayments.push({ blockHash: blocks[i].blockHash, challengePeriod });
         }
       }
-
-      if (pending) {
-        pendingPayments.push({ blockHash: blocks[i].blockHash, challengePeriod });
-      }
     }
+
     res.json({ pendingPayments });
   } catch (err) {
     next(err);

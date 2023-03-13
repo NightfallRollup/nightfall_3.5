@@ -81,6 +81,7 @@ module.exports = {
   BLOCKCHAIN_WS_HOST: process.env.BLOCKCHAIN_WS_HOST || 'blockchain',
   BLOCKCHAIN_PORT: process.env.BLOCKCHAIN_PORT || 8546,
   MONGO_URL: process.env.MONGO_URL || 'mongodb://localhost:27017/',
+  MONGO_PAGE_COUNT: process.env.MONGO_PER_PAGE || 100,
   PROTOCOL: process.env.PROTOCOL || 'http://', // connect to circom worker microservice like this
   WEBSOCKET_PORT: process.env.WEBSOCKET_PORT || 8080,
   WEBSOCKET_PING_TIME: 15000,
