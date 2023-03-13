@@ -4,10 +4,12 @@ import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import downloadFile from '@polygon-nightfall/common-files/utils/httputils.mjs';
 import * as snarkjs from 'snarkjs';
 import compile from '../utils/compile.mjs';
+import compileWitnessCalculator from '../utils/compileWitnessCalculator.mjs';
 
 export default async function generateKeys({ filepath }) {
   const outputPath = `./output`;
   const circuitsPath = `./circuits`;
+  const proverPath = `prover`;
 
   const ext = path.extname(filepath);
   const circuitName = path.basename(filepath, '.circom'); // filename without '.circom'
@@ -47,6 +49,13 @@ export default async function generateKeys({ filepath }) {
 
   logger.info('Exporting verification Key...');
   const vk = await snarkjs.zKey.exportVerificationKey(
+    `${outputPath}/${circuitDir}/${circuitName}.zkey`,
+  );
+
+  await compileWitnessCalculator(
+    `${outputPath}/${circuitDir}/${circuitDir}_cpp`,
+    `${outputPath}/${proverPath}`,
+    `${circuitName}`,
     `${outputPath}/${circuitDir}/${circuitName}.zkey`,
   );
 

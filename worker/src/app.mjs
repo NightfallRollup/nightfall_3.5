@@ -8,6 +8,7 @@ import vk from './routes/vk.mjs';
 import loadCircuits from './routes/loadCircuits.mjs';
 import checkCircuitHash from './routes/checkCircuitHash.mjs';
 import getCircuitHash from './routes/getCircuitHash.mjs';
+import startProver from './routes/startProver.mjs';
 
 const app = express();
 
@@ -18,6 +19,7 @@ setupHttpDefaults(app, app => {
   app.use('/load-circuits', loadCircuits);
   app.use('/check-circuit-hash', checkCircuitHash);
   app.use('/get-circuit-hash', getCircuitHash);
+  app.use('/start-prover', startProver);
 });
 
 export default app;

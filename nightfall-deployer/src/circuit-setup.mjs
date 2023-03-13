@@ -66,7 +66,7 @@ async function walk(dir) {
  */
 async function setupCircuits() {
   // do all the trusted setups needed first, we need to find the circuits we're going to do the setup on
-  const circuitsToSetup = await await walk(config.CIRCUITS_HOME);
+  const circuitsToSetup = await walk(config.CIRCUITS_HOME);
   // then we'll get all of the vks (some may not exist but we'll handle that in
   // a moments). We'll grab promises and then resolve them after the loop.
   const vks = [];
@@ -199,6 +199,8 @@ async function setupCircuits() {
       throw err;
     }
   }
+
+  axios.post(`${config.PROTOCOL}${config.CIRCOM_WORKER_HOST}/start-prover`, {});
 }
 
 export default { setupCircuits, waitForWorker };

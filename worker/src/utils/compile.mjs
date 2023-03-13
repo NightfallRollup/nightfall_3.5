@@ -24,7 +24,7 @@ export default async function compile(codePath, outputPath = './', options = {})
   return new Promise((resolve, reject) => {
     const circom = spawn(
       '/app/circom',
-      ['--r1cs', '--wasm', '--json', '--output', parsedOutputPath, codePath],
+      ['--r1cs', '--wasm', '--c', '--json', '--output', parsedOutputPath, codePath],
       {
         stdio: ['ignore', 'pipe', 'pipe'],
       },

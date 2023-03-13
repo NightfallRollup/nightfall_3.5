@@ -1,29 +1,37 @@
-import childProcess from 'child_process';
+import axios from 'axios';
 
-const { spawn } = childProcess;
+async function callInput(input, circuit) {
+  const res = await axios.post(`http://localhost:9080/input/${circuit}`, input);
+  if (res.status === 200) {
+    return true;
+  } else {
+    throw new Error(res.status);
+  }
+}
+
+async function getStatus() {
+  const res = await axios.get(`http://localhost:9080/status`);
+  if (res.status !== 200) {
+    throw new Error(res.status);
+  }
+  return res.data;
+}
 
 /**
- * Takes in a circuit proving key and a witness and outputs a proof and public inputs json files.
- * @param {String} circuitKey - Path to proving key
- * @param {String} witness - Witness file
- * @param {String} jsonProof - JSON proof as output
- * @param {String} jsonPublic - JSON public inputs as output
+ * Takes in a input with all the inputs of the circuit and outputs a proof and public inputs.
+ * @param {String} input - Input for the circuit
+ * @param {String} circuit - Circuit to use
  */
-export default async function generateProof(circuitKey, witness, jsonProof, jsonPublic) {
-  const args = [circuitKey, witness, jsonProof, jsonPublic];
+export default async function generateProof(input, circuit) {
+  await callInput(input, circuit);
+  let st;
+  st = await getStatus();
+  while (st.status == 'busy') {
+    st = await getStatus();
+  }
 
-  return new Promise((resolve, reject) => {
-    const prover = spawn('/app/prover', args, {
-      stdio: ['ignore', 'ignore', 'pipe'],
-    });
+  const proof = JSON.parse(st.proof);
+  const publicInputs = JSON.parse(st.pubData);
 
-    prover.stderr.on('data', err => {
-      reject(new Error(`Generate proof failed: ${err}`));
-    });
-
-    prover.on('close', () => {
-      // Generate-proof doesn't seem to have any output, so we're not doing the same check as the other functions.
-      resolve();
-    });
-  });
+  return { proof, publicInputs };
 }
