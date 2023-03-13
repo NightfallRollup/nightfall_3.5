@@ -144,7 +144,7 @@ async function blockProposedEventHandler(data) {
   );
 
   const res = await saveTree(block.blockNumber, block.blockNumberL2, updatedTimber);
-  logger.debug(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
+  logger.info(`Saving tree with block number ${block.blockNumberL2}, ${res}`);
   pm.stop('blockProposedEventHandler - stateLess Timber');
 
   // signal to the block-making routines that a block is received: they

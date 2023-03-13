@@ -27,10 +27,7 @@ import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
 import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 
-import {
-  submitTransaction,
-  transactionSubmittedEventHandler,
-} from '../event-handlers/transaction-submitted.mjs';
+import { submitTransaction } from '../event-handlers/transaction-submitted.mjs';
 
 import { checkTransaction } from '../services/transaction-checker.mjs';
 

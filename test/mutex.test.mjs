@@ -1,7 +1,7 @@
 /* eslint import/no-extraneous-dependencies: "off" */
 
 import chai from 'chai';
-import ClusterMutex from '../utils/mutex.mjs';
+import ClusterMutex from '../nightfall-client/src/services/mutex.mjs';
 
 const { expect } = chai;
 let mutex;
