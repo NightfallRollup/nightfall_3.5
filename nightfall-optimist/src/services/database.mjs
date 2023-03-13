@@ -225,20 +225,6 @@ export async function getFindBlocksByProposerPagination(proposer, pageCount = MO
 }
 
 /**
- * DEPRECATED: Use paginated results coming from getFindBlocksByProposerPagination() call instead
- * function to find blocks produced by a proposer
- */
-export async function findBlocksByProposer(proposer) {
-  const connection = await mongo.connection(MONGO_URL);
-  const db = connection.db(OPTIMIST_DB);
-  const query = { proposer };
-  return db
-    .collection(SUBMITTED_BLOCKS_COLLECTION)
-    .find(query, { sort: { blockNumberL2: 1 } })
-    .toArray();
-}
-
-/**
  * Function to store addresses and URL of proposers that are registered through this
  * app. These are needed because the app needs to know when one of them is the
  * current (active) proposer, at which point it will automatically start to
