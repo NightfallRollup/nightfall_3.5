@@ -13,6 +13,7 @@ export async function getCircuitHash(circuitName) {
     params: { circuit: circuitName },
   });
 
+  console.log("XXXXXXX", responseCircuitHash.data);
   const circuitHash = generalise(responseCircuitHash.data.circuitHash.slice(0, 12)).hex(5);
   return circuitHash;
 }
