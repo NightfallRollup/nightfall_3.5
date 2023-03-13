@@ -20,6 +20,7 @@ const {
   INVALID_BLOCKS_COLLECTION,
   COMMIT_COLLECTION,
   TIMBER_COLLECTION,
+  MONGO_PAGE_COUNT,
   TIMBER_HEIGHT,
   HASH_TYPE,
 } = config;
@@ -204,16 +205,23 @@ export async function saveInvalidBlock(_block) {
 }
 
 /**
- * function to find blocks produced by a proposer
+ * function to get the pagination to blocks produced by a proposer
  */
-export async function findBlocksByProposer(proposer) {
+export async function getFindBlocksByProposerPagination(proposer, pageCount = MONGO_PAGE_COUNT) {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
   const query = { proposer };
-  return db
-    .collection(SUBMITTED_BLOCKS_COLLECTION)
-    .find(query, { sort: { blockNumberL2: 1 } })
-    .toArray();
+  const count = await db.collection(SUBMITTED_BLOCKS_COLLECTION).countDocuments(query);
+  const limit = Number(pageCount);
+  const length = Math.ceil(count / limit);
+
+  return Array.from({ length }, (_, i) => i * limit).map(
+    skip => () =>
+      db
+        .collection(SUBMITTED_BLOCKS_COLLECTION)
+        .find(query, { sort: { blockNumberL2: 1 }, skip, limit })
+        .toArray(),
+  );
 }
 
 /**
