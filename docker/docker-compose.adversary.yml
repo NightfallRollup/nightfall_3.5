@@ -83,8 +83,8 @@ services:
       MONGO_URL: ${MONGO_URL:-mongodb://mongodb-adversary:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted'] 
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker'] 
 
   bad-client:
     build:

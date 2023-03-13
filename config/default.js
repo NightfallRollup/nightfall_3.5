@@ -66,14 +66,26 @@ module.exports = {
   CONTRACT_ARTIFACTS: process.env.CONTRACT_ARTIFACTS || '/app/build/contracts',
   EXCLUDE_DIRS: 'common',
   MAX_QUEUE: 10,
-  TX_WORKER_PARAMS: {
-    txWorkerCount: process.env.TX_WORKER_COUNT || 100,
-    txWorkerUrl: process.env.TX_WORKER_URL || 'http://opt-txw',
+  OPTIMIST_BA_WORKER_PARAMS: {
+    optimistBaWorkerUrl: process.env.OPTIMIST_BA_WORKER_URL || 'http://opt-baw',
+  },
+  OPTIMIST_TX_WORKER_PARAMS: {
+    optimistTxWorkerCount: process.env.OPTIMIST_TX_WORKER_COUNT || 2,
+    optimistTxWorkerUrl: process.env.OPTIMIST_TX_WORKER_URL || 'http://opt-txw',
+  },
+  CLIENT_TX_WORKER_PARAMS: {
+    clientTxWorkerCount: process.env.CLIENT_TX_WORKER_COUNT || 2,
+    clientTxWorkerUrl: process.env.CLIENT_TX_WORKER_URL || 'http://client-txw',
+    clientUrl: process.env.CLIENT_URL || 'http://client',
+  },
+  CIRCOM_WORKER_PARAMS: {
+    circomWorkerCount: process.env.CIRCOM_WORKER_COUNT || 2,
+    circomWorkerUrl: `http://${process.env.CIRCOM_WORKER_HOST}` || 'http://worker',
   },
   TIMBER_HEIGHT: 32,
   TXHASH_TREE_HEIGHT: 5,
   CONFIRMATION_POLL_TIME: 1000,
-  CONFIRMATIONS: process.env.CONFIRMATIONS || 12,
+  CONFIRMATIONS: Number(process.env.CONFIRMATIONS) || 12,
   DEFAULT_ACCOUNT_NUM: 10,
   HASH_TYPE: 'poseidon',
   TXHASH_TREE_HASH_TYPE: 'keccak256',
@@ -207,8 +219,9 @@ module.exports = {
       name: 'Mainnet',
       chainId: 1,
       clientApiUrl: '',
+      clientApiTxUrl: '',
+      clientApiBpUrl: '',
       optimistApiUrl: '',
-      optimistTxWorkerApiUrl: '',
       optimistWsUrl: '',
       web3WsUrl: '',
     },
@@ -219,9 +232,6 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
-        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
-        : 'http://localhost:8081',
-      optimistTxWorkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST
@@ -244,15 +254,16 @@ module.exports = {
       clientApiUrl: process.env.CLIENT_HOST
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
+      clientApiTxUrl: 'http://localhost:3010',
+      clientApiBpUrl: 'http://localhost:3020',
       optimistApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
-      optimistTxWorkerApiUrl: process.env.OPTIMIST_TX_WORKER_HOST
-        ? `http://${process.env.OPTIMIST_TX_WORKER_HOST}:${process.env.OPTIMIST_TX_WORKER_PORT}`
-        : 'http://opt-txw',
+      optimistApiBaUrl: 'http://localhost:3030',
       optimistWsUrl: process.env.OPTIMIST_HOST
         ? `ws://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_WS_PORT}`
         : 'ws://localhost:8082',
+      optimistWsBaUrl: 'ws:/localhost:3031',
       proposerBaseUrl: process.env.PROPOSER_HOST
         ? `http://${process.env.PROPOSER_HOST}:${process.env.PROPOSER_PORT}`
         : 'http://localhost:8092',
@@ -281,10 +292,12 @@ module.exports = {
     aws: {
       name: 'AWS',
       chainId: 1337,
-      clientApiUrl: `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`,
+      clientApiUrl: process.env.CLIENT_URL || 'http://localhost:8080',
+      clientApiTxUrl: process.env.CLIENT_TX_WORKER_URL || 'http://localhost:3010',
+      clientApiBpUrl: process.env.CLIENT_BP_WORKER_URL || 'http//localhost:3020',
       optimistApiUrl: `https://${process.env.OPTIMIST_HTTP_HOST}`,
-      optimistTxWorkerApiUrl: `https://${process.env.OPTIMIST_TX_WORKER_HOST}`,
       optimistWsUrl: `wss://${process.env.OPTIMIST_HOST}`,
+      optimistWsBaUrl: `wss://${process.env.OPTIMIST_BA_WORKER_WS_HOST}`,
       proposerBaseUrl: `https://${process.env.PROPOSER_HOST}`,
       web3WsUrl: `wss://${process.env.BLOCKCHAIN_WS_HOST}${process.env.BLOCKCHAIN_PATH}`,
       adversarialOptimistApiUrl: `https://${process.env.ADVERSARY_OPTIMIST_HTTP_HOST}`,
@@ -301,9 +314,6 @@ module.exports = {
         ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
         : 'http://localhost:8080',
       optimistApiUrl: process.env.OPTIMIST_HOST
-        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
-        : 'http://localhost:8081',
-      optimistTxWorkerApiUrl: process.env.OPTIMIST_HOST
         ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
         : 'http://localhost:8081',
       optimistWsUrl: process.env.OPTIMIST_HOST

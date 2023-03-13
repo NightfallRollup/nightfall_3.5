@@ -19,7 +19,7 @@ class PerformanceBenchmark {
     });
   }
 
-  stats(id = null) {
+  stats(id = null, mode = 'full') {
     const groupEvents = [...this.#events.values()].reduce((accumulator, currentValue) => {
       return {
         ...accumulator,
@@ -53,7 +53,7 @@ class PerformanceBenchmark {
         [key]: {
           id: key,
           count,
-          samples,
+          samples: mode === 'full' ? samples : '',
           max,
           min,
           mean,

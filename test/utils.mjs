@@ -375,6 +375,22 @@ export const depositNTransactions = async (nf3, N, ercAddress, tokenType, value,
   return depositTransactions;
 };
 
+export const depositNTransactionsAsync = async (
+  nf3,
+  N,
+  ercAddress,
+  tokenType,
+  value,
+  tokenId,
+  fee,
+) => {
+  for (let i = 0; i < N; i++) {
+    nf3.deposit(ercAddress, tokenType, value, tokenId, fee).catch(err => console.log('Error', err));
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 6000));
+};
+
 export const transferNTransactions = async (
   nf3,
   N,
@@ -405,6 +421,22 @@ export const transferNTransactions = async (
   await new Promise(resolve => setTimeout(resolve, 6000));
 
   return transferTransactions;
+};
+
+export const transferNTransactionsAsync = async (
+  nf3,
+  N,
+  ercAddress,
+  tokenType,
+  value,
+  tokenId,
+  compressedZkpPublicKey,
+  fee,
+) => {
+  for (let i = 0; i < N; i++) {
+    nf3.transfer(false, ercAddress, tokenType, value, tokenId, compressedZkpPublicKey, fee);
+  }
+  await new Promise(resolve => setTimeout(resolve, 6000));
 };
 
 export const withdrawNTransactions = async (
@@ -519,7 +551,8 @@ export const clearMempool = async ({ optimistUrl, web3, logs }) => {
   ).length;
   while (transactionsMempool > 0) {
     console.log(`Transactions still in the mempool: ${transactionsMempool}`);
-    await axios.post(`${optimistUrl}/block/make-now`);
+    //await axios.post(`${optimistUrl}/block/make-now`);
+    await axios.post(`http://localhost:3030/block/make-now`);
     await web3.waitForEvent(logs, ['blockProposed']);
     transactionsMempool = (await axios.get(`${optimistUrl}/proposer/mempool`)).data.result.filter(
       e => e.mempool,
@@ -550,7 +583,9 @@ export async function getLayer2Balances(_nf3User, tokenAddress) {
 
 export async function getUserCommitments(clientApiUrl, compressedZkpPublicKey) {
   const userCommitments = (
-    await axios.post(`${clientApiUrl}/commitment/compressedZkpPublicKeys`, [compressedZkpPublicKey])
+    await axios.post(`http://localhost:3010/commitment/compressedZkpPublicKeys`, [
+      compressedZkpPublicKey,
+    ])
   ).data.commitmentsByListOfCompressedZkpPublicKey;
 
   return userCommitments

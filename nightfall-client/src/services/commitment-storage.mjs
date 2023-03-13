@@ -4,10 +4,10 @@ Logic for storing and retrieving commitments from a mongo DB.  Abstracted from
 deposit/transfer/withdraw
 */
 import config from 'config';
-import { Mutex } from 'async-mutex';
 import gen from 'general-number';
 import mongo from '@polygon-nightfall/common-files/utils/mongo.mjs';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
+import axios from 'axios';
 import { Commitment, Nullifier } from '../classes/index.mjs';
 // eslint-disable-next-line import/no-cycle
 import { isValidWithdrawal } from './valid-withdrawal.mjs';
@@ -17,10 +17,24 @@ import {
   getTransactionHashSiblingInfo,
 } from './database.mjs';
 import { syncState } from './state-sync.mjs';
+import ClusterMutex from './mutex.mjs';
 
 const { MONGO_URL, COMMITMENTS_DB, COMMITMENTS_COLLECTION } = config;
+const { clientUrl } = config.CLIENT_TX_WORKER_PARAMS;
+
 const { generalise } = gen;
-const mutex = new Mutex();
+// No mutex timeout
+const clusterMutex = new ClusterMutex(-1);
+
+export async function lockUsableCommitments(compressedZkpPublicKey) {
+  const lockReceipt = await clusterMutex.lock(compressedZkpPublicKey);
+  return lockReceipt;
+}
+
+export function releaseUsableCommitments(compressedZkpPublicKey, lockReceipt) {
+  const res = clusterMutex.release(compressedZkpPublicKey, lockReceipt);
+  return res;
+}
 
 // function to format a commitment for a mongo db and store it
 export async function storeCommitment(_commitment, nullifierKey) {
@@ -59,6 +73,16 @@ export async function updateCommitment(commitment, updates) {
   return db.collection(COMMITMENTS_COLLECTION).updateOne(query, update);
 }
 
+export async function getCommitmentsByHash(commitments) {
+  const connection = await mongo.connection(MONGO_URL);
+  const query = { _id: { $in: commitments } };
+  const db = connection.db(COMMITMENTS_DB);
+  return db
+    .collection(COMMITMENTS_COLLECTION)
+    .find(query, { projection: { _id: 1 } })
+    .toArray();
+}
+
 // function to get count of commitments. Can also be used to check if it exists
 export async function countCommitments(commitments) {
   const connection = await mongo.connection(MONGO_URL);
@@ -84,6 +108,20 @@ export async function countCircuitTransactions(transactionHashes, circuitHash) {
   };
   const db = connection.db(COMMITMENTS_DB);
   return db.collection(COMMITMENTS_COLLECTION).countDocuments(query);
+}
+
+// function to get count of transaction hashes that belongs to the circuitHash specified
+export async function getCircuitTransactionsByHash(transactionHashes, circuitHash) {
+  const connection = await mongo.connection(MONGO_URL);
+  const query = {
+    transactionHash: { $in: transactionHashes },
+    nullifierCircuitHash: circuitHash,
+  };
+  const db = connection.db(COMMITMENTS_DB);
+  return db
+    .collection(COMMITMENTS_COLLECTION)
+    .find(query, { projection: { transactionHash: 1, _id: 0 } })
+    .toArray();
 }
 
 // function to get if the transaction hash belongs to a withdraw transaction
@@ -643,12 +681,15 @@ async function verifyEnoughCommitments(
 
   if (maxNonFeeNullifiers !== 0) {
     // Get the commitments from the database
-    const commitmentArray = await getAvailableCommitments(
+    const _commitmentArray = await getAvailableCommitments(
       db,
       compressedZkpPublicKey,
       ercAddress,
       tokenId,
     );
+
+    // commitments may exist, but may not be ready for use. So lets use the ones that are fully ready
+    const commitmentArray = _commitmentArray.filter(c => 'siblingPath' in c);
 
     // If not commitments are found, the transfer/withdrawal cannot be paid, so throw an error
     if (commitmentArray.length === 0)
@@ -886,7 +927,7 @@ function selectCommitments(commitments, value, minC, maxC) {
   return rankedSubsetCommitmentsArray.length > 0 ? rankedSubsetCommitmentsArray[0] : [];
 }
 
-async function findUsableCommitments(
+export async function findUsableCommitments(
   compressedZkpPublicKey,
   ercAddress,
   _tokenId,
@@ -960,18 +1001,25 @@ export async function findUsableCommitmentsMutex(
   maxNullifiers,
   maxNonFeeNullifiers,
 ) {
-  return mutex.runExclusive(async () =>
-    findUsableCommitments(
-      compressedZkpPublicKey,
-      ercAddress,
-      tokenId,
-      ercAddressFee,
-      _value,
-      _fee,
-      maxNullifiers,
-      maxNonFeeNullifiers,
-    ),
+  const userIndex = compressedZkpPublicKey.limbs(32)[0];
+  const res = await axios.post(`${clientUrl}/mutex/lock-commitments`, {
+    compressedZkpPublicKey: userIndex,
+  });
+  const usableCommitments = findUsableCommitments(
+    compressedZkpPublicKey,
+    ercAddress,
+    tokenId,
+    ercAddressFee,
+    _value,
+    _fee,
+    maxNullifiers,
+    maxNonFeeNullifiers,
   );
+  axios.post(`${clientUrl}/mutex/release-commitments`, {
+    compressedZkpPublicKey: userIndex,
+    lockReceipt: res.data.lockReceipt,
+  });
+  return usableCommitments;
 }
 
 /**

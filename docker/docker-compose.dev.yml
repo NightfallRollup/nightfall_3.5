@@ -34,9 +34,50 @@ services:
       - type: bind
         source: ../config/default.js
         target: /config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
     ports:
       - 9239:9229
     command: ['npm', 'run', 'dev']
+
+  client-txw:
+    build:
+      dockerfile: docker/client_txw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-client/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-tx-worker']
+
+  client-bpw:
+    build:
+      dockerfile: docker/client_bpw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-client/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-bp-worker'] 
 
   deployer:
     build:
@@ -87,6 +128,9 @@ services:
       - type: bind
         source: ../config/default.js
         target: /app/config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
     ports:
       - 9229:9229
     command: ['npm', 'run', 'dev']
@@ -105,7 +149,48 @@ services:
       - type: bind
         source: ../config/default.js
         target: /app/config/default.js
-    command: ['npm', 'run', 'dev-tx-submitted']
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
+
+  opt-baw:
+    build:
+      dockerfile: docker/opt_baw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-optimist/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /app/config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-block-assembly-worker']
+
+  opt-bpw:
+    build:
+      dockerfile: docker/opt_bpw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-optimist/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /app/config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-block-proposed-worker']
 
   worker:
     build:

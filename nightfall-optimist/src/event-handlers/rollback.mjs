@@ -18,7 +18,7 @@ import {
 } from '../services/database.mjs';
 import Block from '../classes/block.mjs';
 import { checkTransaction } from '../services/transaction-checker.mjs';
-import { signalRollbackCompleted as signalRollbackCompletedToProposer } from '../services/block-assembler.mjs';
+import { dispatchSignalRollbackCompleted as dispatchSignalRollbackCompletedToProposer } from '../services/block-assembler.mjs';
 import {
   signalRollbackCompleted as signalRollbackCompletedToChallenger,
   isMakeChallengesEnable,
@@ -138,7 +138,7 @@ async function rollbackEventHandler(data) {
   // if optimist has a register proposer, signal rollback to
   // that proposer websocket client
   if ((await getAllRegisteredProposersCount()) > 0)
-    await enqueueEvent(() => signalRollbackCompletedToProposer(), 0);
+    await enqueueEvent(() => dispatchSignalRollbackCompletedToProposer(), 0);
 
   // assumption is if optimist has makeChallenges ON there is challenger
   // websocket client waiting for signal rollback

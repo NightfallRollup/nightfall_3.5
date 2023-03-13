@@ -60,7 +60,94 @@ services:
       OPTIMIST_PORT: ${OPTIMIST_PORT:-80}
       STATE_GENESIS_BLOCK: ${STATE_GENESIS_BLOCK:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
     command: ['npm', 'run', 'dev']
+
+  client-txw:
+    build:
+      dockerfile: docker/client_txw.Dockerfile
+      context: ..
+    image: client-txw:latest
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build
+    networks:
+      - nightfall_network
+    ports:
+      - 3010:80
+    depends_on:
+      - mongodb
+    environment:
+      AUTHENTICATION_KEY: ${AUTHENTICATION_KEY}
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-600}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      CIRCOM_WORKER_HOST: ${CIRCOM_WORKER_HOST:-worker}
+      ENDPOINTS_WHITELISTED: ${ENDPOINTS_WHITELISTED}
+      ENABLE_QUEUE: ${ENABLE_QUEUE:-1}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      ETH_ADDRESS: ${ETH_ADDRESS}
+      ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
+      ETH_NETWORK: ${ETH_NETWORK}
+      GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${CLIENT_MONGO_URL:-mongodb://mongodb:27017}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-amqp://rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      OPTIMIST_HOST: ${OPTIMIST_HOST:-optimist}
+      OPTIMIST_PORT: ${OPTIMIST_PORT:-80}
+      STATE_GENESIS_BLOCK: ${STATE_GENESIS_BLOCK:-0}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      CLIENT_TX_WORKER_COUNT: ${CLIENT_TX_WORKER_COUNT:-2}
+      CLIENT_URL: ${CLIENT_URL:-http://client}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
+    command: ['npm', 'run', 'start-tx-worker']
+
+  client-bpw:
+    build:
+      dockerfile: docker/client_bwp.Dockerfile
+      context: ..
+    image: client-bpw:latest
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build
+    networks:
+      - nightfall_network
+    ports:
+      - 3020:80
+    depends_on:
+      - mongodb
+    environment:
+      AUTHENTICATION_KEY: ${AUTHENTICATION_KEY}
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-600}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      CIRCOM_WORKER_HOST: ${CIRCOM_WORKER_HOST:-worker}
+      ENDPOINTS_WHITELISTED: ${ENDPOINTS_WHITELISTED}
+      ENABLE_QUEUE: ${ENABLE_QUEUE:-1}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      ETH_ADDRESS: ${ETH_ADDRESS}
+      ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
+      ETH_NETWORK: ${ETH_NETWORK}
+      GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${CLIENT_MONGO_URL:-mongodb://mongodb:27017}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-amqp://rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      OPTIMIST_HOST: ${OPTIMIST_HOST:-optimist}
+      OPTIMIST_PORT: ${OPTIMIST_PORT:-80}
+      STATE_GENESIS_BLOCK: ${STATE_GENESIS_BLOCK:-0}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
+    command: ['npm', 'run', 'start-bp-worker']
 
     # Temporary container to deploy contracts and circuits and populate volumes
   deployer:
@@ -155,7 +242,9 @@ services:
       PROPOSER_MAX_BLOCK_PERIOD_MILIS: ${PROPOSER_MAX_BLOCK_PERIOD_MILIS:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
     command: ['npm', 'run', 'dev']
 
   opt-txw:
@@ -186,8 +275,74 @@ services:
       MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://mongodb:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted']
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
+    command: ['npm', 'run', 'start-tx-submitted-worker']
+
+  opt-baw:
+    build:
+      dockerfile: docker/opt_baw.Dockerfile
+      context: ..
+    image: opt-baw:latest
+    depends_on:
+      - mongodb
+    networks:
+      - nightfall_network
+    ports:
+      - 3030:80
+      - 3031:8080
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build/
+    environment:
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      HASH_TYPE: poseidon
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://mongodb:27017}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
+    command: ['npm', 'run', 'start-block-assembly-worker']
+
+  opt-bpw:
+    build:
+      dockerfile: docker/opt_bpw.Dockerfile
+      context: ..
+    image: opt-bpw:latest
+    depends_on:
+      - mongodb
+    networks:
+      - nightfall_network
+    ports:
+      - 3040:80
+      - 3041:8080
+    volumes:
+      - type: volume
+        source: build
+        target: /app/build/
+    environment:
+      AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-1000}
+      BLOCKCHAIN_URL: ${BLOCKCHAIN_URL}
+      BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
+      BLOCKCHAIN_PORT: ${BLOCKCHAIN_PORT:-8546}
+      ENVIRONMENT: ${ENVIRONMENT:-localhost}
+      HASH_TYPE: poseidon
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
+      LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://mongodb:27017}
+      USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
+      WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw}
+      PERFORMANCE_BENCHMARK_ENABLE: ${PERFORMANCE_BENCHMARK_ENABLE:-false}
+    command: ['npm', 'run', 'start-block-proposer-worker']
 
   rabbitmq:
     image: rabbitmq
@@ -226,6 +381,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
       LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
+      CIRCOM_WORKER_COUNT: ${CIRCOM_WORKER_COUNT:-2}
     entrypoint: ['npm', 'run', 'start']
 
 volumes:

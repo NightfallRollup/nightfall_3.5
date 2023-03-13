@@ -19,7 +19,7 @@ setupHttpDefaults(
   app,
   app => {
     app.use('/proposer', proposer);
-    app.use('/block', block);
+    //app.use('/block', block);
     app.use('/challenger', challenger);
     app.use('/transaction', transaction);
     app.use('/contract-address', getContractAddress);

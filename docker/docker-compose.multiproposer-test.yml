@@ -216,7 +216,8 @@ services:
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
-      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw1}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw1}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw1}
     command: ['npm', 'run', 'dev']
 
   opt-txw1:
@@ -247,8 +248,8 @@ services:
       MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://optimist_mongodb_1:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted']
+      OPTIMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   proposer_optimist_2:
     build:
@@ -293,7 +294,8 @@ services:
       IS_CHALLENGER: ${IS_CHALLENGER:-false}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
-      TX_WORKER_URL: ${TX_WORKER_URL:-http://opt-txw2}
+      OPTIMIST_TX_WORKER_URL: ${OPTIMIST_TX_WORKER_URL:-http://opt-txw2}
+      OPTIMIST_BA_WORKER_URL: ${OPTIMIST_BA_WORKER_URL:-http://opt-baw2}
     command: ['npm', 'run', 'dev']
 
   opt-txw2:
@@ -324,8 +326,8 @@ services:
       MONGO_URL: ${OPTIMIST_MONGO_URL:-mongodb://optimist_mongodb_2:27017}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
-      TX_WORKER_COUNT: ${TX_WORKER_COUNT:-100}
-    command: ['npm', 'run', 'dev-tx-submitted']
+      OPTMIST_TX_WORKER_COUNT: ${OPTIMIST_TX_WORKER_COUNT:-2}
+    command: ['npm', 'run', 'dev-tx-submitted-worker']
 
   optimist_mongodb_1:
     image: mongo:4.4.1-bionic

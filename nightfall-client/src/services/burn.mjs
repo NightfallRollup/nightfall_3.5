@@ -14,6 +14,7 @@ import { getCommitmentInfo } from '../utils/getCommitmentInfo.mjs';
 import { computeCircuitInputs } from '../utils/computeCircuitInputs.mjs';
 import { submitTransaction } from '../utils/submitTransaction.mjs';
 import { ZkpKeys } from './keys.mjs';
+import { feeL2TokenAddressGet } from './transaction.mjs';
 
 const { VK_IDS } = config;
 const { SHIELD_CONTRACT_NAME, BURN } = constants;
@@ -41,7 +42,7 @@ async function burn(burnParams) {
     fee,
     ercAddress,
     tokenId,
-    feeL2TokenAddress,
+    feeL2TokenAddress: await feeL2TokenAddressGet(),
     rootKey,
     maxNullifiers: VK_IDS[circuitName].numberNullifiers,
     maxNonFeeNullifiers: 1,

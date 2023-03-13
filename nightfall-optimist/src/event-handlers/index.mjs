@@ -19,20 +19,20 @@ import {
 } from './chain-reorg.mjs';
 
 const eventHandlers = {
-  BlockProposed: blockProposedEventHandler,
+  //BlockProposed: blockProposedEventHandler,
   TransactionSubmitted: transactionSubmittedEventHandler,
   Rollback: rollbackEventHandler,
   CommittedToChallenge: committedToChallengeEventHandler,
   NewCurrentProposer: newCurrentProposerEventHandler,
   InstantWithdrawalRequested: instantWithdrawalRequestedEventHandler,
   removers: {
-    BlockProposed: removeBlockProposedEventHandler,
+    //BlockProposed: removeBlockProposedEventHandler,
     CommittedToChallenge: removeCommittedToChallengeEventHandler,
     TransactionSubmitted: removeTransactionSubmittedEventHandler,
     NewCurrentProposer: removeNewCurrentProposerEventHandler,
   },
   priority: {
-    BlockProposed: 0,
+    //BlockProposed: 0,
     TransactionSubmitted: 1,
     Rollback: 0,
     CommittedToChallenge: 0,

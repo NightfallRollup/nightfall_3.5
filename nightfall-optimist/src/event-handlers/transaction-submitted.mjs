@@ -6,6 +6,7 @@ import axios from 'axios';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
 import constants from '@polygon-nightfall/common-files/constants/index.mjs';
 import { waitForContract } from '@polygon-nightfall/common-files/utils/contract.mjs';
+import * as pm from '@polygon-nightfall/common-files/utils/stats.mjs';
 import {
   deleteDuplicateCommitmentsAndNullifiersFromMemPool,
   saveTransaction,
@@ -16,7 +17,7 @@ import { getTransactionSubmittedCalldata } from '../services/process-calldata.mj
 
 const { STATE_CONTRACT_NAME } = constants;
 
-const { txWorkerUrl } = config.TX_WORKER_PARAMS;
+const { optimistTxWorkerUrl } = config.OPTIMIST_TX_WORKER_PARAMS;
 
 // Flag to enable/disable worker processing
 //  When disabled, workers are stopped. Workers are
@@ -36,6 +37,7 @@ export function workerEnableGet() {
  * @param {Object} eventParams Transaction data
  */
 export async function submitTransaction(eventParams) {
+  pm.start('submitTransaction');
   const { offchain = false, ...data } = eventParams;
   let transaction;
   if (offchain) {
@@ -93,6 +95,7 @@ export async function submitTransaction(eventParams) {
       logger.error(err);
     }
   }
+  pm.stop('submitTransaction');
 }
 
 /**
@@ -105,11 +108,11 @@ export async function transactionSubmittedEventHandler(eventParams) {
   // If TX WORKERS enabled or not responsive, route transaction requests to main thread
   if (_workerEnable) {
     axios
-      .post(`${txWorkerUrl}/workers/transaction-submitted`, {
+      .post(`${optimistTxWorkerUrl}/workers/transaction-submitted`, {
         eventParams,
       })
       .catch(function (error) {
-        logger.error(`Error submit tx worker ${error}, ${txWorkerUrl}`);
+        logger.error(`Error submit tx worker ${error}, ${optimistTxWorkerUrl}`);
         submitTransaction(eventParams);
       });
   } else {

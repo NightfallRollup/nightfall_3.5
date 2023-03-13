@@ -7,7 +7,7 @@ RUN apt-get update \
     python3 make g++ netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 80
+EXPOSE 80 8080 
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
@@ -21,7 +21,7 @@ RUN npm link
 
 WORKDIR /app
 COPY nightfall-optimist/src src
-COPY nightfall-optimist/docker-tx-submitted-entrypoint.sh ./docker-entrypoint.sh
+COPY nightfall-optimist/docker-block-assembly-entrypoint.sh ./docker-entrypoint.sh
 COPY nightfall-optimist/package*.json ./
 
 RUN npm ci
@@ -30,4 +30,4 @@ COPY common-files/classes node_modules/@polygon-nightfall/common-files/classes
 COPY common-files/utils node_modules/@polygon-nightfall/common-files/utils
 COPY common-files/constants node_modules/@polygon-nightfall/common-files/constants
 
-CMD ["npm", "run", "start-tx-submitted-worker"]
+CMD ["npm", "run", "start-block-assembly-worker"]

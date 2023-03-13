@@ -2,7 +2,7 @@ version: '3.5'
 # Use this script for running up nightfall_3 client in 'developer' mode with local
 # bindings.  See the readme for more information.
 services:
-  client:
+  client_1:
     volumes:
       - type: bind
         source: ../nightfall-client/src
@@ -14,7 +14,7 @@ services:
         source: ../config/default.js
         target: /config/default.js
 
-  worker:
+  worker_1:
     volumes:
       - type: bind
         source: ../nightfall-deployer/circuits
@@ -29,3 +29,41 @@ services:
       # to use with postman and etc
       - 8091:80
     entrypoint: ['npm', 'run', 'start']
+
+  client-txw_1:
+    build:
+      dockerfile: docker/client_txw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-client/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-tx-worker']
+
+  client-bpw_1:
+    build:
+      dockerfile: docker/client_bpw.Dockerfile
+      context: ..
+    volumes:
+      - type: bind
+        source: ../nightfall-client/src
+        target: /app/src
+      - type: bind
+        source: ../common-files
+        target: /common-files
+      - type: bind
+        source: ../config/default.js
+        target: /config/default.js
+    environment:
+      PERFORMANCE_BENCHMARK_ENABLE: 'true'
+      CONFIRMATIONS: ${CONFIRMATIONS:-12}
+    command: ['npm', 'run', 'dev-bp-worker'] 

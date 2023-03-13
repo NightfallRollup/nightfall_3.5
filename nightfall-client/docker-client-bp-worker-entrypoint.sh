@@ -6,4 +6,8 @@ then
   while ! nc -z ${BLOCKCHAIN_WS_HOST} ${BLOCKCHAIN_PORT}; do sleep 3; done
 fi
 
+# wait until there's a circom worker host up
+while ! nc -z ${CIRCOM_WORKER_HOST} 80; do sleep 3; done
+
+
 exec "$@"

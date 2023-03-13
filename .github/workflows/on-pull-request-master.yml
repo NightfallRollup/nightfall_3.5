@@ -200,7 +200,7 @@ jobs:
   circuits-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -257,7 +257,7 @@ jobs:
   ganache-protocol-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -314,7 +314,7 @@ jobs:
   ganache-erc20-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,opt-txw
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,opt-txw,client-txw,client-bpw
       DEPLOY_MOCKED_SANCTIONS_CONTRACT: true
     runs-on: ubuntu-20.04
     steps:
@@ -372,7 +372,7 @@ jobs:
   ganache-erc721-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -429,7 +429,7 @@ jobs:
   ganache-erc1155-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -486,7 +486,7 @@ jobs:
   ganache-tokenisation-l2-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -544,7 +544,7 @@ jobs:
     env:
       WHITELISTING: enable
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -601,7 +601,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: administrator,blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: administrator,blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -658,7 +658,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,opt-txw
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,opt-txw,client-txw,client-bpw
     steps:
       - uses: actions/checkout@master
       - uses: actions/setup-node@v3
@@ -860,7 +860,7 @@ jobs:
     env:
       MAX_BLOCK_SIZE: 25000
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     name: check gas transactions per block
     runs-on: ubuntu-20.04
     steps:
@@ -997,7 +997,7 @@ jobs:
   periodic-payment-test:
     env:
       CONFIRMATIONS: 1
-      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker
+      NF_SERVICES_TO_START: blockchain,client,deployer,mongodb,optimist,rabbitmq,worker,client-txw,client-bpw
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
