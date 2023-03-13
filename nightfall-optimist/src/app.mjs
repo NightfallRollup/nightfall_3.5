@@ -4,7 +4,6 @@ import express from 'express';
 import { setupHttpDefaults } from '@polygon-nightfall/common-files/utils/httputils.mjs';
 import {
   proposer,
-  block,
   challenger,
   transaction,
   getContractAddress,
@@ -19,7 +18,6 @@ setupHttpDefaults(
   app,
   app => {
     app.use('/proposer', proposer);
-    //app.use('/block', block);
     app.use('/challenger', challenger);
     app.use('/transaction', transaction);
     app.use('/contract-address', getContractAddress);

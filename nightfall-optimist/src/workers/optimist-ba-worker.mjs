@@ -20,10 +20,7 @@
 */
 
 import express from 'express';
-import config from 'config';
 import logger from '@polygon-nightfall/common-files/utils/logger.mjs';
-import constants from '@polygon-nightfall/common-files/constants/index.mjs';
-import { waitForTimeout } from '@polygon-nightfall/common-files/utils/utils.mjs';
 import { setupHttpDefaults } from '@polygon-nightfall/common-files/utils/httputils.mjs';
 import { block, debug } from '../routes/index.mjs';
 
@@ -79,7 +76,6 @@ async function initWorkers() {
     true,
     false,
   );
-
 
   app.listen(80);
 }

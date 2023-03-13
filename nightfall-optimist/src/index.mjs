@@ -8,22 +8,16 @@ import { checkContractsABI } from '@polygon-nightfall/common-files/utils/sync-fi
 import app from './app.mjs';
 import {
   startEventQueue,
-  subscribeToBlockAssembledWebSocketConnection,
   subscribeToChallengeWebSocketConnection,
   subscribeToInstantWithDrawalWebSocketConnection,
-  subscribeToProposedBlockWebSocketConnection,
   eventHandlers,
 } from './event-handlers/index.mjs';
 import Proposer from './classes/proposer.mjs';
-import {
-  setBlockAssembledWebSocketConnection,
-  conditionalMakeBlockDispatch,
-} from './services/block-assembler.mjs';
+import { conditionalMakeBlockDispatch } from './services/block-assembler.mjs';
 import { setChallengeWebSocketConnection } from './services/challenges.mjs';
 import { initialBlockSync } from './services/state-sync.mjs';
 import { setInstantWithdrawalWebSocketConnection } from './services/instant-withdrawal.mjs';
 import { setProposer } from './routes/proposer.mjs';
-//import { setBlockProposedWebSocketConnection } from './event-handlers/block-proposed.mjs';
 
 const main = async () => {
   try {
@@ -32,10 +26,8 @@ const main = async () => {
     setProposer(proposer); // passes the proposer instance int the proposer routes
 
     // subscribe to WebSocket events first
-    //await subscribeToBlockAssembledWebSocketConnection(setBlockAssembledWebSocketConnection);
     await subscribeToChallengeWebSocketConnection(setChallengeWebSocketConnection);
     await subscribeToInstantWithDrawalWebSocketConnection(setInstantWithdrawalWebSocketConnection);
-    //await subscribeToProposedBlockWebSocketConnection(setBlockProposedWebSocketConnection);
     await startEventQueue(queueManager, eventHandlers, proposer);
 
     // enqueue the block-assembler every time the queue becomes empty

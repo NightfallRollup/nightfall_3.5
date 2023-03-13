@@ -1015,7 +1015,7 @@ export async function findUsableCommitmentsMutex(
     maxNullifiers,
     maxNonFeeNullifiers,
   );
-  axios.post(`${clientUrl}/mutex/release-commitments`, {
+  await axios.post(`${clientUrl}/mutex/release-commitments`, {
     compressedZkpPublicKey: userIndex,
     lockReceipt: res.data.lockReceipt,
   });
